@@ -10,33 +10,141 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as QbankRouteImport } from './routes/qbank'
+import { Route as TestsRouteImport } from './routes/tests'
+import { Route as LectureVideoIdRouteImport } from './routes/lecture.$videoId'
+import { Route as SubjectsIndexRouteImport } from './routes/subjects.index'
+import { Route as SubjectsSubjectIdRouteImport } from './routes/subjects.$subjectId'
+import { Route as ApiNprepSplatRouteImport } from './routes/api/nprep.$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QbankRoute = QbankRouteImport.update({
+  id: '/qbank',
+  path: '/qbank',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestsRoute = TestsRouteImport.update({
+  id: '/tests',
+  path: '/tests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LectureVideoIdRoute = LectureVideoIdRouteImport.update({
+  id: '/lecture/$videoId',
+  path: '/lecture/$videoId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubjectsIndexRoute = SubjectsIndexRouteImport.update({
+  id: '/subjects/',
+  path: '/subjects/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubjectsSubjectIdRoute = SubjectsSubjectIdRouteImport.update({
+  id: '/subjects/$subjectId',
+  path: '/subjects/$subjectId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNprepSplatRoute = ApiNprepSplatRouteImport.update({
+  id: '/api/nprep/$',
+  path: '/api/nprep/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
+  '/qbank': typeof QbankRoute
+  '/tests': typeof TestsRoute
+  '/lecture/$videoId': typeof LectureVideoIdRoute
+  '/subjects/$subjectId': typeof SubjectsSubjectIdRoute
+  '/subjects/': typeof SubjectsIndexRoute
+  '/api/nprep/$': typeof ApiNprepSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
+  '/qbank': typeof QbankRoute
+  '/tests': typeof TestsRoute
+  '/lecture/$videoId': typeof LectureVideoIdRoute
+  '/subjects/$subjectId': typeof SubjectsSubjectIdRoute
+  '/subjects': typeof SubjectsIndexRoute
+  '/api/nprep/$': typeof ApiNprepSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
+  '/qbank': typeof QbankRoute
+  '/tests': typeof TestsRoute
+  '/lecture/$videoId': typeof LectureVideoIdRoute
+  '/subjects/$subjectId': typeof SubjectsSubjectIdRoute
+  '/subjects/': typeof SubjectsIndexRoute
+  '/api/nprep/$': typeof ApiNprepSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/profile'
+    | '/qbank'
+    | '/tests'
+    | '/lecture/$videoId'
+    | '/subjects/$subjectId'
+    | '/subjects/'
+    | '/api/nprep/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/login'
+    | '/profile'
+    | '/qbank'
+    | '/tests'
+    | '/lecture/$videoId'
+    | '/subjects/$subjectId'
+    | '/subjects'
+    | '/api/nprep/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/profile'
+    | '/qbank'
+    | '/tests'
+    | '/lecture/$videoId'
+    | '/subjects/$subjectId'
+    | '/subjects/'
+    | '/api/nprep/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
+  ProfileRoute: typeof ProfileRoute
+  QbankRoute: typeof QbankRoute
+  TestsRoute: typeof TestsRoute
+  LectureVideoIdRoute: typeof LectureVideoIdRoute
+  SubjectsSubjectIdRoute: typeof SubjectsSubjectIdRoute
+  SubjectsIndexRoute: typeof SubjectsIndexRoute
+  ApiNprepSplatRoute: typeof ApiNprepSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +156,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qbank': {
+      id: '/qbank'
+      path: '/qbank'
+      fullPath: '/qbank'
+      preLoaderRoute: typeof QbankRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tests': {
+      id: '/tests'
+      path: '/tests'
+      fullPath: '/tests'
+      preLoaderRoute: typeof TestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lecture/$videoId': {
+      id: '/lecture/$videoId'
+      path: '/lecture/$videoId'
+      fullPath: '/lecture/$videoId'
+      preLoaderRoute: typeof LectureVideoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/subjects/': {
+      id: '/subjects/'
+      path: '/subjects'
+      fullPath: '/subjects/'
+      preLoaderRoute: typeof SubjectsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/subjects/$subjectId': {
+      id: '/subjects/$subjectId'
+      path: '/subjects/$subjectId'
+      fullPath: '/subjects/$subjectId'
+      preLoaderRoute: typeof SubjectsSubjectIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/nprep/$': {
+      id: '/api/nprep/$'
+      path: '/api/nprep/$'
+      fullPath: '/api/nprep/$'
+      preLoaderRoute: typeof ApiNprepSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
+  ProfileRoute: ProfileRoute,
+  QbankRoute: QbankRoute,
+  TestsRoute: TestsRoute,
+  LectureVideoIdRoute: LectureVideoIdRoute,
+  SubjectsSubjectIdRoute: SubjectsSubjectIdRoute,
+  SubjectsIndexRoute: SubjectsIndexRoute,
+  ApiNprepSplatRoute: ApiNprepSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
