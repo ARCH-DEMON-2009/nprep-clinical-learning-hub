@@ -87,6 +87,7 @@ export function imageOf(o: any, depth = 0): string | undefined {
     const r = typeof v === "object" ? imageOf(v, depth + 1) : undefined;
     if (r) return r;
   }
+  return undefined;
 }
 
 export function isVideoLike(o: any) {

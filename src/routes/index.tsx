@@ -38,7 +38,7 @@ function Dashboard() {
         </div>
       )}
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
-        {[["Subjects & Lectures", "/subjects"], ["Tests & PYQ", "/tests"], ["QBank", "/qbank"]].map(([t, to]) => (
+        {([["Subjects & Lectures", "/subjects"], ["Tests & PYQ", "/tests"], ["QBank", "/qbank"]] as const).map(([t, to]) => (
           <Link key={to} to={to} className="rounded-xl border border-border bg-accent p-5 font-semibold text-accent-foreground hover:border-primary">{t} →</Link>
         ))}
       </div>

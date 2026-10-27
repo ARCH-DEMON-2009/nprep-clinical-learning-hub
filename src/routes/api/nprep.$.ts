@@ -15,7 +15,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
   const res = await fetch(target, {
     method: request.method,
     headers,
-    body: hasBody ? await request.text() : undefined,
+    body: hasBody ? await request.text() : null,
   });
   return new Response(await res.text(), {
     status: res.status,
