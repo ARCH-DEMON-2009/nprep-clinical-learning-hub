@@ -31,6 +31,7 @@ function Subjects() {
           <ItemCard key={i} item={s} onClick={() => { const id = idOf(s); if (id) nav({ to: "/subjects/$subjectId", params: { subjectId: id } }); }} />
         ))}
       </div>
+      {!q.isLoading && items.length < 3 && <RawData data={q.data} />}
     </div>
   );
 }
