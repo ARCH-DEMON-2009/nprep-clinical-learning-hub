@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ErrorBox, Loading, PageTitle } from "@/components/AppShell";
 import { ItemCard } from "@/components/ItemCard";
 import { api, firstArray, idOf } from "@/lib/api";
+import { RawData } from "@/components/AppShell";
 
 export const Route = createFileRoute("/subjects/")({
   head: () => ({
@@ -30,6 +31,7 @@ function Subjects() {
           <ItemCard key={i} item={s} onClick={() => { const id = idOf(s); if (id) nav({ to: "/subjects/$subjectId", params: { subjectId: id } }); }} />
         ))}
       </div>
+      {!q.isLoading && items.length < 3 && <RawData data={q.data} />}
     </div>
   );
 }

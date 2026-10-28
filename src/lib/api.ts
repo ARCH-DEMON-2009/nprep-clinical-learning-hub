@@ -68,14 +68,14 @@ export function findArrays(obj: any, depth = 0, name = "items"): { name: string;
   return Object.entries(obj).flatMap(([k, v]) => findArrays(v, depth + 1, k));
 }
 
-export const firstArray = (x: any) => findArrays(unwrap(x))[0]?.items ?? [];
+export const firstArray = (x: any): any[] => pickList(unwrap(x));
 
 export const titleOf = (o: any): string =>
   o?.title ?? o?.name ?? o?.subject_name ?? o?.course_name ?? o?.section_name ?? o?.video_title ??
-  o?.test_name ?? findKey(o, /(title|name)$/i) ?? "Untitled";
+  o?.test_name ?? o?.subjectName ?? o?.courseName ?? findKey(o, /(title|name)$/i) ?? "Untitled";
 
 export const idOf = (o: any): string | undefined => {
-  const v = o?.id ?? o?._id ?? o?.video_id ?? o?.videoId ?? o?.subject_id ?? o?.course_id ?? o?.test_id;
+  const v = o?.id ?? o?._id ?? o?.subjectId ?? o?.courseId ?? o?.video_id ?? o?.videoId ?? o?.subject_id ?? o?.course_id ?? o?.test_id;
   return v == null ? undefined : String(v);
 };
 
@@ -95,3 +95,35 @@ export function isVideoLike(o: any) {
 }
 
 export const label = (k: string) => k.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+const hasTitle = (o: any) =>
+  o && typeof o === "object" && Object.keys(o).some((k) => /(title|name)$/i.test(k) && typeof o[k] === "string");
+
+/** Best list of real entities: flattens group wrappers (e.g. [{category, subjects:[...]}]). */
+export function pickList(x: any, depth = 0): any[] {
+  if (!x || typeof x !== "object" || depth > 5) return [];
+  if (Array.isArray(x)) {
+    const objs = x.filter((o) => o && typeof o === "object");
+    if (objs.length && objs.filter(hasTitle).length >= objs.length / 2) return objs;
+    const nested = objs.flatMap((o) => pickList(o, depth + 1));
+    return nested.length ? nested : objs;
+  }
+  let best: any[] = [];
+  for (const v of Object.values(x)) {
+    const r = pickList(v, depth + 1);
+    if (r.filter(hasTitle).length > best.filter(hasTitle).length) best = r;
+  }
+  return best;
+}
+
+/** Question count under any common key name. */
+export function questionCount(o: any): number | undefined {
+  if (!o || typeof o !== "object") return undefined;
+  for (const [k, v] of Object.entries(o)) {
+    if (/(question|ques|_qs$|^qs$|mcq)/i.test(k) && !/(attempt|solved|complet|correct|wrong|skip)/i.test(k)) {
+      const n = Number(Array.isArray(v) ? v.length : v);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+  }
+  return undefined;
+}
