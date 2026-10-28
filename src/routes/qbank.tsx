@@ -4,7 +4,7 @@ import { RefreshCw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Loading, PageTitle } from "@/components/AppShell";
 import { ItemCard } from "@/components/ItemCard";
-import { api, firstArray, titleOf } from "@/lib/api";
+import { api, firstArray, questionCount, titleOf } from "@/lib/api";
 
 export const Route = createFileRoute("/qbank")({
   head: () => ({
@@ -55,7 +55,7 @@ function QBank() {
       )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((s: any, i: number) => {
-          const total = s?.total_questions;
+          const total = questionCount(s);
           const done = s?.completed_count ?? s?.attempted_count ?? s?.solved_count;
           const pct = total && done != null ? Math.min(100, Math.round((done / total) * 100)) : null;
           return (

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ErrorBox, Loading, PageTitle } from "@/components/AppShell";
 import { ItemCard } from "@/components/ItemCard";
 import { api, firstArray, idOf } from "@/lib/api";
+import { RawData } from "@/components/AppShell";
 
 export const Route = createFileRoute("/subjects/")({
   head: () => ({

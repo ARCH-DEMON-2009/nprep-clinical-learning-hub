@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ClipboardList, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { Loading, PageTitle } from "@/components/AppShell";
-import { api, firstArray, imageOf, titleOf } from "@/lib/api";
+import { api, firstArray, imageOf, questionCount, titleOf } from "@/lib/api";
 
 export const Route = createFileRoute("/tests")({
   head: () => ({
@@ -58,7 +58,7 @@ function Tests() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {tests.map((t, j) => {
-                  const total = t?.total_count ?? t?.total_questions;
+                  const total = questionCount(t);
                   const done = t?.completed_count ?? 0;
                   const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
                   return (
@@ -68,7 +68,7 @@ function Tests() {
                       <div className="p-4">
                         <div className="font-semibold leading-snug group-hover:text-primary">{titleOf(t)}</div>
                         <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                          {t?.total_questions != null && <span>{t.total_questions} questions</span>}
+                          {questionCount(t) != null && <span>{questionCount(t)} questions</span>}
                           {t?.total_count != null && <span>· {t.total_count} exams</span>}
                         </div>
                         {total != null && (
@@ -99,7 +99,7 @@ function Tests() {
               <div className="min-w-0 flex-1">
                 <h3 className="font-display text-lg font-semibold">{titleOf(selected)}</h3>
                 <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                  {selected?.total_questions != null && <p>{selected.total_questions} questions</p>}
+                  {questionCount(selected) != null && <p>{questionCount(selected)} questions</p>}
                   {selected?.total_count != null && <p>{selected.total_count} exams in this series</p>}
                   {selected?.completed_count != null && <p>{selected.completed_count} completed by you</p>}
                   {selected?.duration != null && <p>{selected.duration} minutes</p>}
