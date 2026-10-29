@@ -8,6 +8,8 @@ import { RawData } from "@/components/AppShell";
 export const Route = createFileRoute("/subjects/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Subjects & Lectures — NPrep" },
       { name: "description", content: "Browse all NPrep subjects and video lectures." },
       { property: "og:title", content: "Subjects & Lectures — NPrep" },

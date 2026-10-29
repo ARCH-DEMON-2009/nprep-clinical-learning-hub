@@ -8,6 +8,8 @@ import { api, findArrays, firstArray, idOf, imageOf, titleOf } from "@/lib/api";
 export const Route = createFileRoute("/subjects/$subjectId")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Courses — NPrep" },
       { name: "description", content: "Courses, sections and lectures for this subject." },
       { property: "og:title", content: "Courses — NPrep" },

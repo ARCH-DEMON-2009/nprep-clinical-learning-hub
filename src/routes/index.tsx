@@ -7,6 +7,8 @@ import { api, findArrays, findKey, imageOf, label, unwrap } from "@/lib/api";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Dashboard — NPrep" },
       { name: "description", content: "Your NPrep learning dashboard." },
       { property: "og:title", content: "Dashboard — NPrep" },

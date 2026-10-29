@@ -5,6 +5,8 @@ import { api, findKey, setToken } from "@/lib/api";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Sign in — NPrep" },
       { name: "description", content: "Sign in to NPrep with your mobile number." },
       { property: "og:title", content: "Sign in — NPrep" },

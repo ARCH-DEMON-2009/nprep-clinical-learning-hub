@@ -4,6 +4,8 @@ import { RefreshCw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Loading, PageTitle } from "@/components/AppShell";
 import { ItemCard } from "@/components/ItemCard";
+import { Assessment } from "@/components/Assessment";
+import { Button } from "@/components/ui/button";
 import { api, firstArray, questionCount, titleOf } from "@/lib/api";
 
 export const Route = createFileRoute("/qbank")({
@@ -22,6 +24,7 @@ function QBank() {
   const q = useQuery({ queryKey: ["qbank"], queryFn: () => api("/qbank/subjects"), retry: 1 });
   const subjects = firstArray(q.data);
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<any>();
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -59,7 +62,7 @@ function QBank() {
           const done = s?.completed_count ?? s?.attempted_count ?? s?.solved_count;
           const pct = total && done != null ? Math.min(100, Math.round((done / total) * 100)) : null;
           return (
-            <ItemCard key={s?.id ?? i} item={s}>
+            <ItemCard key={s?.id ?? i} item={s} onClick={() => setSelected(s)}>
               <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                 {total != null && <span>{total} questions</span>}
                 {done != null && <span>· {done} practiced</span>}
@@ -72,10 +75,12 @@ function QBank() {
                   </div>
                 </div>
               )}
+              <Button className="mt-4 w-full" onClick={() => setSelected(s)}>Open practice</Button>
             </ItemCard>
           );
         })}
       </div>
+      {selected && <Assessment item={selected} kind="qbank" onClose={() => setSelected(undefined)} />}
     </div>
   );
 }
