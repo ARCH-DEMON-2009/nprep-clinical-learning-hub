@@ -1,13 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ClipboardList, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useState } from "react";
+import { Assessment } from "@/components/Assessment";
+import { Button } from "@/components/ui/button";
 import { Loading, PageTitle } from "@/components/AppShell";
 import { api, firstArray, imageOf, questionCount, titleOf } from "@/lib/api";
 
 export const Route = createFileRoute("/tests")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Tests & PYQ — NPrep" },
       { name: "description", content: "Test series and previous year questions." },
       { property: "og:title", content: "Tests & PYQ — NPrep" },
@@ -62,8 +66,8 @@ function Tests() {
                   const done = t?.completed_count ?? 0;
                   const pct = total ? Math.min(100, Math.round((done / total) * 100)) : 0;
                   return (
-                    <button key={t?.id ?? j} onClick={() => setSelected(t)}
-                      className="group overflow-hidden rounded-xl border border-border bg-card text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                    <Button variant="outline" key={t?.id ?? j} onClick={() => setSelected(t)}
+                      className="group block h-auto whitespace-normal p-0 overflow-hidden rounded-xl border border-border bg-card text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                       {imageOf(t) && <img src={imageOf(t)} alt="" className="aspect-video w-full bg-muted object-cover" loading="lazy" />}
                       <div className="p-4">
                         <div className="font-semibold leading-snug group-hover:text-primary">{titleOf(t)}</div>
@@ -82,7 +86,7 @@ function Tests() {
                           </div>
                         )}
                       </div>
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -91,31 +95,8 @@ function Tests() {
         );
       })}
 
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4" onClick={() => setSelected(undefined)}>
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start gap-3">
-              <div className="rounded-lg bg-primary/10 p-2"><ClipboardList className="h-5 w-5 text-primary" /></div>
-              <div className="min-w-0 flex-1">
-                <h3 className="font-display text-lg font-semibold">{titleOf(selected)}</h3>
-                <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                  {questionCount(selected) != null && <p>{questionCount(selected)} questions</p>}
-                  {selected?.total_count != null && <p>{selected.total_count} exams in this series</p>}
-                  {selected?.completed_count != null && <p>{selected.completed_count} completed by you</p>}
-                  {selected?.duration != null && <p>{selected.duration} minutes</p>}
-                </div>
-              </div>
-            </div>
-            <p className="mt-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-              Test taking opens in the NPrep mobile app. Your progress here stays in sync with it.
-            </p>
-            <button onClick={() => setSelected(undefined)}
-              className="mt-4 w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      {selected && <Assessment item={selected} kind="test" onClose={() => setSelected(undefined)} />}
+
     </div>
   );
 }

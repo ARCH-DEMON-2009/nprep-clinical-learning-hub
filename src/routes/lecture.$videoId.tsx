@@ -2,14 +2,16 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Download, ExternalLink, FileText, Maximize, RotateCcw, RotateCw, SkipForward } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ErrorBox, Loading, RawData } from "@/components/AppShell";
-import { api, findArrays, findKey, imageOf, titleOf, unwrap } from "@/lib/api";
+import { ErrorBox, Loading } from "@/components/AppShell";
+import { api, findArrays, findKey, imageOf, titleOf } from "@/lib/api";
 import { lectureData, lectureMedia, playbackMessage } from "@/lib/lecture";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/lecture/$videoId")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Lecture — NPrep" },
       { name: "description", content: "Watch the lecture with chapters and notes." },
       { property: "og:title", content: "Lecture — NPrep" },
@@ -165,25 +167,25 @@ function Lecture() {
           </div>
           {src && (
             <div className="flex flex-wrap items-center gap-2 border-t border-background/20 p-3">
-              <button onClick={() => skip(-10)} aria-label="Rewind 10 seconds"
+              <Button variant="ghost" onClick={() => skip(-10)} aria-label="Rewind 10 seconds"
                 className="flex items-center gap-1 rounded-lg bg-background/10 px-3 py-1.5 text-sm text-background hover:bg-background/20">
                 <RotateCcw className="h-4 w-4" /> 10s
-              </button>
-              <button onClick={() => skip(10)} aria-label="Forward 10 seconds"
+              </Button>
+              <Button variant="ghost" onClick={() => skip(10)} aria-label="Forward 10 seconds"
                 className="flex items-center gap-1 rounded-lg bg-background/10 px-3 py-1.5 text-sm text-background hover:bg-background/20">
                 10s <RotateCw className="h-4 w-4" />
-              </button>
-              <button onClick={changeSpeed} aria-label="Playback speed"
+              </Button>
+              <Button variant="ghost" onClick={changeSpeed} aria-label="Playback speed"
                 className="rounded-lg bg-background/10 px-3 py-1.5 text-sm font-medium text-background hover:bg-background/20">
                 {speed}x
-              </button>
+              </Button>
               <span className="ml-auto font-mono text-sm text-background/80">
                 {fmtTime(time)} / {fmtTime(duration)}
               </span>
-              <button onClick={fullscreen} aria-label="Full screen"
+              <Button variant="ghost" onClick={fullscreen} aria-label="Full screen"
                 className="rounded-lg bg-background/10 p-1.5 text-background hover:bg-background/20">
                 <Maximize className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -217,14 +219,14 @@ function Lecture() {
 
       <aside className="h-fit overflow-hidden rounded-xl border border-border bg-card">
         <div className="flex border-b border-border text-sm font-medium">
-          <button onClick={() => setTab("chapters")}
+          <Button variant="ghost" onClick={() => setTab("chapters")}
             className={`flex-1 px-4 py-3 transition ${tab === "chapters" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}>
             Chapters {stamps.length > 0 && `(${stamps.length})`}
-          </button>
-          <button onClick={() => setTab("notes")}
+          </Button>
+          <Button variant="ghost" onClick={() => setTab("notes")}
             className={`flex-1 px-4 py-3 transition ${tab === "notes" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}>
             Notes {notes.length > 0 && `(${notes.length})`}
-          </button>
+          </Button>
         </div>
 
         {tab === "chapters" && (
@@ -237,12 +239,12 @@ function Lecture() {
                 const active = secs != null && time >= secs && (i === stamps.length - 1 || time < toSeconds(findKey(stamps[i + 1], /time|start|second/i)));
                 return (
                   <li key={i}>
-                    <button onClick={() => seek(c)}
+                    <Button variant="ghost" onClick={() => seek(c)}
                       className={`flex w-full items-center gap-3 rounded-lg p-2 text-left text-sm hover:bg-accent ${active ? "bg-accent" : ""}`}>
                       <span className="font-mono text-primary">{secs != null ? fmtTime(secs) : ""}</span>
                       <span className="flex-1">{titleOf(c)}</span>
                       {active && <CheckCircle2 className="h-4 w-4 text-primary" />}
-                    </button>
+                    </Button>
                   </li>
                 );
               })}
@@ -256,10 +258,10 @@ function Lecture() {
             {notes.map((p, i) => (
               <div key={p} className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setPdf(pdf === p ? undefined : p)}
+                  <Button variant="ghost" onClick={() => setPdf(pdf === p ? undefined : p)}
                     className={`flex flex-1 items-center gap-2 rounded-lg border px-3 py-2 text-sm ${pdf === p ? "border-primary bg-accent" : "border-border"}`}>
                     <FileText className="h-4 w-4 text-primary" /> Notes {notes.length > 1 ? i + 1 : ""}
-                  </button>
+                  </Button>
                   <a href={p} download target="_blank" rel="noreferrer" aria-label="Download notes"
                     className="rounded-lg border border-border p-2 hover:bg-accent"><Download className="h-4 w-4" /></a>
                   <a href={p} target="_blank" rel="noreferrer" aria-label="Open notes in new tab"

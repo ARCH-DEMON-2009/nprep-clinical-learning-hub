@@ -5,6 +5,8 @@ import { findKey, imageOf } from "@/lib/api";
 export const Route = createFileRoute("/profile")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "My Profile — NPrep" },
       { name: "description", content: "Your NPrep profile and subscription." },
       { property: "og:title", content: "My Profile — NPrep" },

@@ -4,6 +4,8 @@ import { RefreshCw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Loading, PageTitle } from "@/components/AppShell";
 import { ItemCard } from "@/components/ItemCard";
+import { Assessment } from "@/components/Assessment";
+import { Button } from "@/components/ui/button";
 import { api, firstArray, questionCount, titleOf } from "@/lib/api";
 
 export const Route = createFileRoute("/qbank")({
@@ -22,6 +24,7 @@ function QBank() {
   const q = useQuery({ queryKey: ["qbank"], queryFn: () => api("/qbank/subjects"), retry: 1 });
   const subjects = firstArray(q.data);
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<any>();
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -72,10 +75,12 @@ function QBank() {
                   </div>
                 </div>
               )}
+              <Button className="mt-4 w-full" onClick={() => setSelected(s)}>Open practice</Button>
             </ItemCard>
           );
         })}
       </div>
+      {selected && <Assessment item={selected} kind="qbank" onClose={() => setSelected(undefined)} />}
     </div>
   );
 }
