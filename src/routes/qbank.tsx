@@ -62,7 +62,7 @@ function QBank() {
           const done = s?.completed_count ?? s?.attempted_count ?? s?.solved_count;
           const pct = total && done != null ? Math.min(100, Math.round((done / total) * 100)) : null;
           return (
-            <ItemCard key={s?.id ?? i} item={s}>
+            <ItemCard key={s?.id ?? i} item={s} onClick={() => setSelected(s)}>
               <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                 {total != null && <span>{total} questions</span>}
                 {done != null && <span>· {done} practiced</span>}
