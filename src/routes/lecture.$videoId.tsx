@@ -82,7 +82,7 @@ function Lecture() {
     setPlaybackError(""); setTime(0); setDuration(0); setSpeed(1);
     const onError = () => setPlaybackError("The browser could not play this video. Try again to refresh the lecture link.");
     el.addEventListener("error", onError);
-    async function attach() {
+    const attach = async () => {
       try {
         if (/\.(mp4|webm)(?:[?#]|$)/i.test(src ?? "") && !license) {
           el.src = src ?? "";
@@ -106,7 +106,7 @@ function Lecture() {
       } catch (error) {
         if (!cancelled) setPlaybackError(playbackMessage(error));
       }
-    }
+    };
     void attach();
     return () => {
       cancelled = true;

@@ -1,6 +1,6 @@
 import { idOf, unwrap } from "./api";
 
-export type Question = { id: string; text: string; options: { id: string; text: string; correct?: boolean }[]; correctId?: string; explanation?: string };
+export type Question = { id: string; text: string; options: { id: string; text: string; correct?: boolean }[]; correctId?: string | undefined; explanation?: string | undefined };
 
 export function findEntity(response: any, id: string, depth = 0): any {
   if (!response || typeof response !== "object" || depth > 8) return undefined;
