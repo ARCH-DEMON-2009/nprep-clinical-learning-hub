@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Download, ExternalLink, FileText, Maximize, RotateCcw, RotateCw, SkipForward } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ErrorBox, Loading } from "@/components/AppShell";
-import { api, findArrays, findKey, imageOf, titleOf } from "@/lib/api";
-import { lectureData, lectureMedia, playbackMessage } from "@/lib/lecture";
+import { api, findArrays, findKey, getToken, imageOf, titleOf } from "@/lib/api";
+import { drmKeySystem, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "@/lib/lecture";
+import { mediaProxyUrl } from "@/lib/media-proxy";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/lecture/$videoId")({
@@ -43,9 +44,9 @@ function Lecture() {
   const { videoId } = Route.useParams();
   const q = useQuery({ queryKey: ["video", videoId], queryFn: () => api(`/video?videoId=${videoId}`) });
   const v = lectureData(q.data);
-  const { src: mediaSrc, license, notes, text } = lectureMedia(v);
+  const { src: mediaSrc, license, drmType, notes, text } = lectureMedia(v);
   const embed = mediaSrc && /youtube\.com|youtu\.be|vimeo\.com/i.test(mediaSrc) ? mediaSrc : undefined;
-  const src = embed ? undefined : mediaSrc;
+  const src = embed || !mediaSrc ? undefined : mediaProxyUrl(mediaSrc);
 
   const stamps: any[] = Array.isArray(v?.stamps) ? v.stamps
     : findArrays(v).find((a) => a.items.some((x) => Object.keys(x).some((k) => /time|start|second/i.test(k))))?.items ?? [];
@@ -55,6 +56,7 @@ function Lecture() {
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const playerRef = useRef<any>(null);
+  const refreshedVideoRef = useRef<string | null>(null);
   const [tab, setTab] = useState<"chapters" | "notes">("chapters");
   const [pdf, setPdf] = useState<string>();
   const [speed, setSpeed] = useState(1);
@@ -84,7 +86,16 @@ function Lecture() {
     el.addEventListener("error", onError);
     const attach = async () => {
       try {
-        if (/\.(mp4|webm)(?:[?#]|$)/i.test(src ?? "") && !license) {
+        const token = getToken();
+        if (token) {
+          const session = await fetch("/api/media/session", {
+            method: "POST",
+            headers: { authorization: `Bearer ${token}` },
+          });
+          if (!session.ok) throw new Error("Could not authorize lecture playback");
+        }
+        if (cancelled) return;
+        if (/\.(mp4|webm)(?:[?#]|$)/i.test(mediaSrc ?? "") && !license) {
           el.src = src ?? "";
           el.load();
           return;
@@ -97,14 +108,26 @@ function Lecture() {
         player = new shaka.Player();
         playerRef.current = player;
         player.addEventListener("error", (event: any) => {
-          if (!cancelled) setPlaybackError(playbackMessage(event.detail));
+          if (cancelled) return;
+          const error = event.detail;
+          const details = Array.isArray(error?.data) ? error.data : [];
+          const status = Number.isInteger(details[1]) ? details[1] : undefined;
+          if ([401, 403].includes(status) && refreshedVideoRef.current !== videoId) {
+            refreshedVideoRef.current = videoId;
+            void q.refetch().then((result) => {
+              if (cancelled || !result.data) return;
+              const refreshedSrc = lectureMedia(lectureData(result.data)).src;
+              if (refreshedSrc && refreshedSrc !== mediaSrc) setAttempt((value) => value + 1);
+            });
+          }
+          setPlaybackError(playbackMessage(error, license, drmType));
         });
         await player.attach(el);
         if (cancelled) return;
-        if (license) player.configure({ drm: { servers: { "com.widevine.alpha": license } } });
+        if (license) player.configure({ drm: { servers: { [drmKeySystem(drmType)]: mediaProxyUrl(license) } } });
         await player.load(src);
       } catch (error) {
-        if (!cancelled) setPlaybackError(playbackMessage(error));
+        if (!cancelled) setPlaybackError(playbackMessage(error, license, drmType));
       }
     };
     void attach();
@@ -192,6 +215,10 @@ function Lecture() {
 
         {playbackError && <div role="alert" className="space-y-3 border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           <p>{playbackError}</p>
+          <details className="text-xs">
+            <summary className="cursor-pointer font-medium">Playback diagnostics (redacted)</summary>
+            <pre className="mt-2 whitespace-pre-wrap break-words font-mono">{lectureMediaDiagnostics(q.data, mediaSrc, license, drmType)}</pre>
+          </details>
           <Button variant="outline" onClick={async () => { await q.refetch(); setAttempt((n) => n + 1); }}>Retry playback</Button>
         </div>}
 

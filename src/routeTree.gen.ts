@@ -17,6 +17,7 @@ import { Route as TestsRouteImport } from './routes/tests'
 import { Route as LectureVideoIdRouteImport } from './routes/lecture.$videoId'
 import { Route as SubjectsIndexRouteImport } from './routes/subjects.index'
 import { Route as SubjectsSubjectIdRouteImport } from './routes/subjects.$subjectId'
+import { Route as ApiMediaSplatRouteImport } from './routes/api/media.$'
 import { Route as ApiNprepSplatRouteImport } from './routes/api/nprep.$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -59,6 +60,11 @@ const SubjectsSubjectIdRoute = SubjectsSubjectIdRouteImport.update({
   path: '/subjects/$subjectId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMediaSplatRoute = ApiMediaSplatRouteImport.update({
+  id: '/api/media/$',
+  path: '/api/media/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiNprepSplatRoute = ApiNprepSplatRouteImport.update({
   id: '/api/nprep/$',
   path: '/api/nprep/$',
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/lecture/$videoId': typeof LectureVideoIdRoute
   '/subjects/$subjectId': typeof SubjectsSubjectIdRoute
   '/subjects/': typeof SubjectsIndexRoute
+  '/api/media/$': typeof ApiMediaSplatRoute
   '/api/nprep/$': typeof ApiNprepSplatRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/lecture/$videoId': typeof LectureVideoIdRoute
   '/subjects/$subjectId': typeof SubjectsSubjectIdRoute
   '/subjects': typeof SubjectsIndexRoute
+  '/api/media/$': typeof ApiMediaSplatRoute
   '/api/nprep/$': typeof ApiNprepSplatRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/lecture/$videoId': typeof LectureVideoIdRoute
   '/subjects/$subjectId': typeof SubjectsSubjectIdRoute
   '/subjects/': typeof SubjectsIndexRoute
+  '/api/media/$': typeof ApiMediaSplatRoute
   '/api/nprep/$': typeof ApiNprepSplatRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/lecture/$videoId'
     | '/subjects/$subjectId'
     | '/subjects/'
+    | '/api/media/$'
     | '/api/nprep/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/lecture/$videoId'
     | '/subjects/$subjectId'
     | '/subjects'
+    | '/api/media/$'
     | '/api/nprep/$'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/lecture/$videoId'
     | '/subjects/$subjectId'
     | '/subjects/'
+    | '/api/media/$'
     | '/api/nprep/$'
   fileRoutesById: FileRoutesById
 }
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   LectureVideoIdRoute: typeof LectureVideoIdRoute
   SubjectsSubjectIdRoute: typeof SubjectsSubjectIdRoute
   SubjectsIndexRoute: typeof SubjectsIndexRoute
+  ApiMediaSplatRoute: typeof ApiMediaSplatRoute
   ApiNprepSplatRoute: typeof ApiNprepSplatRoute
 }
 
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SubjectsSubjectIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/media/$': {
+      id: '/api/media/$'
+      path: '/api/media/$'
+      fullPath: '/api/media/$'
+      preLoaderRoute: typeof ApiMediaSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/nprep/$': {
       id: '/api/nprep/$'
       path: '/api/nprep/$'
@@ -224,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   LectureVideoIdRoute: LectureVideoIdRoute,
   SubjectsSubjectIdRoute: SubjectsSubjectIdRoute,
   SubjectsIndexRoute: SubjectsIndexRoute,
+  ApiMediaSplatRoute: ApiMediaSplatRoute,
   ApiNprepSplatRoute: ApiNprepSplatRoute,
 }
 export const routeTree = rootRouteImport
