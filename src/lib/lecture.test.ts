@@ -52,6 +52,10 @@ describe("lecture response normalization", () => {
     expect(signed.searchParams.get("Key-Pair-Id")).toBe("k");
     expect([...signed.searchParams.keys()]).not.toContain("CloudFront-Key-Pair-Id");
   });
+  it("preserves percent-encoded CloudFront signature bytes while renaming query keys", () => {
+    const signed = normalizeCloudFrontSignedUrl(new URL("https://d123.cloudfront.net/video.mpd?CloudFront-Policy=eyJTdGF0ZW1lbnQiOiJ4In0%3D&CloudFront-Signature=ab%2Bcd%2Fef%3D%7E&CloudFront-Key-Pair-Id=K123"));
+    expect(signed.search).toBe("?Policy=eyJTdGF0ZW1lbnQiOiJ4In0%3D&Signature=ab%2Bcd%2Fef%3D%7E&Key-Pair-Id=K123");
+  });
   it("reports lecture credential field names without exposing signed values", () => {
     const diagnostics = lectureMediaDiagnostics({ video: {
       video_url: "https://cdn.example/video.mpd?Policy=secret-policy&Key-Pair-Id=secret-id",

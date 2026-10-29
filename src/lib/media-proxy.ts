@@ -32,17 +32,27 @@ export function mediaProxyUrl(target: string): string {
 }
 
 export function normalizeCloudFrontSignedUrl(target: URL): URL {
-  const aliases = [
-    ["cloudfrontpolicy", "Policy"],
-    ["cloudfrontsignature", "Signature"],
-    ["cloudfrontkeypairid", "Key-Pair-Id"],
-  ] as const;
-  for (const [sourceKey, targetKey] of aliases) {
-    const source = [...target.searchParams.keys()].find((key) => normalizedKey(key) === sourceKey);
-    if (!source) continue;
-    if (!target.searchParams.has(targetKey)) target.searchParams.set(targetKey, target.searchParams.get(source) ?? "");
-    target.searchParams.delete(source);
-  }
+  const aliases: Record<string, string> = {
+    cloudfrontpolicy: "Policy",
+    cloudfrontsignature: "Signature",
+    cloudfrontkeypairid: "Key-Pair-Id",
+  };
+  const query = target.search.slice(1);
+  if (!query) return target;
+  const parts = query.split("&");
+  const existing = new Set(parts.map((part) => part.slice(0, part.indexOf("=") < 0 ? undefined : part.indexOf("=")).toLowerCase()));
+  const renamed = parts.map((part) => {
+    const equals = part.indexOf("=");
+    const rawKey = equals < 0 ? part : part.slice(0, equals);
+    let decodedKey = rawKey;
+    try { decodedKey = decodeURIComponent(rawKey.replace(/\+/g, " ")); } catch {}
+    const canonical = aliases[normalizedKey(decodedKey)];
+    if (!canonical) return part;
+    if (existing.has(canonical.toLowerCase())) return null;
+    existing.add(canonical.toLowerCase());
+    return `${canonical}${equals < 0 ? "" : part.slice(equals)}`;
+  }).filter((part): part is string => part != null);
+  target.search = renamed.length ? `?${renamed.join("&")}` : "";
   return target;
 }
 
