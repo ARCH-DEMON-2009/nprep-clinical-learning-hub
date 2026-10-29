@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { localMediaCookies, localMediaCookiesFromPayload } from "@/lib/media-proxy";
+import { isAllowedMediaHost, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, nprepSiteOrigin } from "@/lib/media-proxy";
 
 // Transparent pass-through to the NPrep backend so the browser avoids CORS.
 // It holds no secrets: the caller's own bearer token is forwarded unchanged.
@@ -7,8 +7,9 @@ async function forward({ request, params }: { request: Request; params: { _splat
   const url = new URL(request.url);
   let target = new URL(`https://api.nprep.in/${params._splat ?? ""}${url.search}`);
   const headers = new Headers();
-  headers.set("origin", "https://nprep.in");
-  headers.set("referer", "https://nprep.in/");
+  const siteOrigin = nprepSiteOrigin(request.url, request.headers.get("origin"), request.headers.get("referer"));
+  headers.set("origin", siteOrigin);
+  headers.set("referer", `${siteOrigin}/`);
   const auth = request.headers.get("authorization");
   if (auth) headers.set("authorization", auth);
   const ct = request.headers.get("content-type");
@@ -38,10 +39,9 @@ async function forward({ request, params }: { request: Request; params: { _splat
     await res.body?.cancel();
     const next = new URL(location, target);
     const hostname = next.hostname.toLowerCase();
-    const trusted = hostname === "nprep.in" || hostname.endsWith(".nprep.in")
-      || hostname.endsWith(".cloudfront.net") || hostname.endsWith(".amazonaws.com");
+    const trusted = isNprepSiteHost(hostname) || isAllowedMediaHost(hostname);
     if (next.protocol !== "https:" || !trusted) return new Response("NPrep redirected to an untrusted media host", { status: 502 });
-    if (hostname !== "nprep.in" && !hostname.endsWith(".nprep.in")) headers.delete("authorization");
+    if (!isNprepSiteHost(hostname)) headers.delete("authorization");
     target = next;
     if (res.status === 303 || ([301, 302].includes(res.status) && method === "POST")) {
       method = "GET";

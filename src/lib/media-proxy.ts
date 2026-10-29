@@ -59,6 +59,7 @@ function normalizedKey(value: string): string {
 
 const MEDIA_HOSTS = [
   "nprep.in",
+  "nprep.site",
   "cloudfront.net",
   "amazonaws.com",
   "akamaized.net",
@@ -76,6 +77,23 @@ const MEDIA_HOSTS = [
 export function isAllowedMediaHost(hostname: string): boolean {
   const normalizedHost = hostname.toLowerCase();
   return MEDIA_HOSTS.some((host) => normalizedHost === host || normalizedHost.endsWith(`.${host}`));
+}
+
+export function isNprepSiteHost(hostname: string): boolean {
+  const normalizedHost = hostname.toLowerCase();
+  return normalizedHost === "nprep.in" || normalizedHost.endsWith(".nprep.in")
+    || normalizedHost === "nprep.site" || normalizedHost.endsWith(".nprep.site");
+}
+
+export function nprepSiteOrigin(requestUrl: string, originHeader?: string | null, refererHeader?: string | null): string {
+  for (const candidate of [originHeader, refererHeader, requestUrl]) {
+    if (!candidate) continue;
+    try {
+      const url = new URL(candidate);
+      if (url.protocol === "https:" && isNprepSiteHost(url.hostname)) return url.origin;
+    } catch {}
+  }
+  return "https://beta.nprep.site";
 }
 
 export function ensureMediaPostContentType(headers: Headers): Headers {

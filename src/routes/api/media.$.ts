@@ -1,15 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, localMediaCookies, normalizeCloudFrontSignedUrl, rewriteMediaManifest } from "@/lib/media-proxy";
+import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, isNprepSiteHost, localMediaCookies, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "@/lib/media-proxy";
 
 const MEDIA_TOKEN_COOKIE = "nprep_media_token";
 
 function allowedTarget(url: URL): boolean {
   if (!(url.protocol === "https:" || url.protocol === "http:") || url.username || url.password) return false;
   return isAllowedMediaHost(url.hostname);
-}
-
-function isNprepHost(hostname: string): boolean {
-  return hostname === "nprep.in" || hostname.endsWith(".nprep.in");
 }
 
 async function forward({ request, params }: { request: Request; params: { _splat?: string } }) {
@@ -30,7 +26,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
   let target: URL;
   try {
     target = normalizeCloudFrontSignedUrl(new URL(decodeMediaTarget(encoded)));
-    if (target.protocol === "http:" && isNprepHost(target.hostname.toLowerCase())) {
+    if (target.protocol === "http:" && isNprepSiteHost(target.hostname.toLowerCase())) {
       target.protocol = "https:";
     }
     if (suffix.length) {
@@ -47,8 +43,9 @@ async function forward({ request, params }: { request: Request; params: { _splat
   if (!allowedTarget(target)) return new Response("Media host is not allowed", { status: 403 });
 
   const headers = new Headers();
-  headers.set("origin", "https://nprep.in");
-  headers.set("referer", "https://nprep.in/");
+  const siteOrigin = nprepSiteOrigin(request.url, request.headers.get("origin"), request.headers.get("referer"));
+  headers.set("origin", siteOrigin);
+  headers.set("referer", `${siteOrigin}/`);
   for (const name of ["range", "if-range", "if-none-match", "if-modified-since", "content-type", "accept", "accept-language", "user-agent", "authorization", "soapaction"]) {
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
@@ -60,7 +57,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
   const cookie = request.headers.get("cookie")?.match(new RegExp(`(?:^|;\\s*)${MEDIA_TOKEN_COOKIE}=([^;]+)`))?.[1];
   const appToken = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1]
     ?? (cookie ? decodeURIComponent(cookie) : undefined);
-  if (appToken && isNprepHost(target.hostname.toLowerCase())) {
+  if (appToken && isNprepSiteHost(target.hostname.toLowerCase())) {
     headers.set("authorization", `Bearer ${appToken}`);
   } else {
     headers.delete("authorization");
@@ -71,7 +68,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
     const separator = cookie.indexOf("=");
     if (separator > 0) signedCookies.set(cookie.slice(0, separator), cookie.slice(separator + 1));
   }
-  const supportsSignedCookies = (hostname: string) => hostname.toLowerCase().endsWith(".cloudfront.net") || isNprepHost(hostname.toLowerCase());
+  const supportsSignedCookies = (hostname: string) => hostname.toLowerCase().endsWith(".cloudfront.net") || isNprepSiteHost(hostname);
   const signedCookieHeader = () => [...signedCookies].map(([name, value]) => `${name}=${value}`).join("; ");
   if (signedCookies.size && supportsSignedCookies(target.hostname)) {
     headers.set("cookie", signedCookieHeader());
@@ -107,7 +104,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
     if (upstream.status === 403 && (method === "GET" || method === "HEAD")) {
       await upstream.body?.cancel();
       const origin = headers.get("origin");
-      const fallbackSite = origin === "https://nprep.in" ? "https://api.nprep.in" : "https://nprep.in";
+      const fallbackSite = origin === siteOrigin ? "https://nprep.in" : siteOrigin;
       headers.set("origin", fallbackSite);
       headers.set("referer", `${fallbackSite}/`);
       try {
@@ -122,7 +119,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
     if (redirects === 5) return new Response("Too many media redirects", { status: 502 });
     const previousOrigin = target.origin;
     target = new URL(location, target);
-    if (target.origin !== previousOrigin && !isNprepHost(target.hostname.toLowerCase())) {
+    if (target.origin !== previousOrigin && !isNprepSiteHost(target.hostname.toLowerCase())) {
       headers.delete("authorization");
     }
     if (signedCookies.size && supportsSignedCookies(target.hostname)) {

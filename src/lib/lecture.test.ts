@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { drmKeySystem, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "./lecture";
-import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, encodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, localMediaCookies, localMediaCookiesFromPayload, mediaProxyUrl, normalizeCloudFrontSignedUrl, rewriteMediaManifest } from "./media-proxy";
+import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, encodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, mediaProxyUrl, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "./media-proxy";
 
 describe("lecture response normalization", () => {
   it("opens a nested video envelope", () => {
@@ -21,6 +21,13 @@ describe("lecture response normalization", () => {
     expect(isAllowedMediaHost("app.tpstreams.com")).toBe(true);
     expect(isAllowedMediaHost("tpstreams.com")).toBe(true);
     expect(isAllowedMediaHost("app.tpstreams.com.attacker.example")).toBe(false);
+  });
+  it("recognizes beta.nprep.site and uses it as the safe local proxy origin", () => {
+    expect(isNprepSiteHost("beta.nprep.site")).toBe(true);
+    expect(isAllowedMediaHost("beta.nprep.site")).toBe(true);
+    expect(nprepSiteOrigin("https://beta.nprep.site/api/media/relay/x")).toBe("https://beta.nprep.site");
+    expect(nprepSiteOrigin("http://localhost:8080/api/media/relay/x")).toBe("https://beta.nprep.site");
+    expect(nprepSiteOrigin("http://localhost:8080", "https://app.nprep.in")).toBe("https://app.nprep.in");
   });
   it("sets the binary content type for DRM POSTs without overriding explicit types", () => {
     expect(ensureMediaPostContentType(new Headers()).get("content-type")).toBe("application/octet-stream");
