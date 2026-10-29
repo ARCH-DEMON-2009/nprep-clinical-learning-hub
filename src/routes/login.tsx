@@ -58,7 +58,10 @@ function Login() {
   return (
     <div className="grid min-h-screen md:grid-cols-2">
       <div className="hidden flex-col justify-between bg-primary p-12 text-primary-foreground md:flex">
-        <div className="font-display text-3xl font-bold">NPrep</div>
+        <div className="flex items-center gap-3 font-display text-3xl font-bold">
+          <img src="/nprep-logo.jpg" alt="" className="h-12 w-12 rounded-lg object-cover" />
+          <span>NPrep</span>
+        </div>
         <div>
           <h1 className="font-display text-5xl font-bold leading-tight">Prepare smarter for your nursing exams.</h1>
           <p className="mt-4 text-lg opacity-80">Lectures, notes, PYQs and test series — all in one place.</p>

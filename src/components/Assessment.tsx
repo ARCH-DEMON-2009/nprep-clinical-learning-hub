@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
 import { api, idOf, titleOf } from "@/lib/api";
-import { assessmentChildren, findEntity, questionList, questionPath, type Question } from "@/lib/assessment";
+import { assessmentChildren, assessmentDiagnostics, assessmentQuestionCount, assessmentQuestionSource, assessmentShareLink, questionList, questionPath, type Question } from "@/lib/assessment";
 import { ErrorBox, Loading } from "./AppShell";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -26,12 +26,15 @@ function AssessmentContent({ item, kind }: { item: any; kind: "test" | "qbank" }
     queryFn: async () => {
       if (path) return api(path);
       const catalog = await api(kind === "test" ? "/test" : "/qbank/subjects");
-      return findEntity(catalog, idOf(current) ?? "") ?? current;
+      const source = assessmentQuestionSource(catalog, idOf(current) ?? "", current);
+      return source.path ? api(source.path) : source.entity;
     },
     retry: 1,
   });
   const questions = questionList(q.data ?? current);
   const children = assessmentChildren(q.data ?? current);
+  const shareLink = assessmentShareLink(q.data) ?? assessmentShareLink(current);
+  const reportedQuestionCount = assessmentQuestionCount(q.data) ?? assessmentQuestionCount(current);
   return <div className="space-y-4">
     {selected && <Button variant="ghost" onClick={() => {
       setSelected(trail.at(-1)); setTrail(trail.slice(0, -1));
@@ -44,7 +47,14 @@ function AssessmentContent({ item, kind }: { item: any; kind: "test" | "qbank" }
           setTrail([...trail, selected]); setSelected(child);
         }}>{titleOf(child)}<ArrowRight /></Button>)}
       </div> : <div role="status" className="space-y-3 border-t border-border pt-4">
-        <p className="text-sm text-muted-foreground">NPrep returned this {kind === "test" ? "test" : "subject"}, but no questions or question link. Question taking cannot start until NPrep provides access to its questions.</p>
+        <p className="text-sm text-muted-foreground">{reportedQuestionCount != null
+          ? `NPrep reports ${reportedQuestionCount} questions but returned no question data or question endpoint for this ${kind === "test" ? "test" : "subject"}.`
+          : `NPrep returned this ${kind === "test" ? "test" : "subject"}, but no questions or question endpoint.`} Question taking can start when question data or an API question link is available.</p>
+        {shareLink && <a href={shareLink} target="_blank" rel="noreferrer" className="inline-flex text-sm font-medium text-primary underline underline-offset-4">Open NPrep share link</a>}
+        <details className="text-xs text-muted-foreground">
+          <summary className="cursor-pointer font-medium">NPrep response shape (field names only)</summary>
+          <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words font-mono">{assessmentDiagnostics({ selected: current, fetched: q.data })}</pre>
+        </details>
         <Button variant="outline" onClick={() => q.refetch()}><RotateCcw />Retry</Button>
       </div>}
   </div>;

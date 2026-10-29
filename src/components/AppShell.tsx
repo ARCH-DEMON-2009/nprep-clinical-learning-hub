@@ -55,9 +55,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="flex h-16 items-center justify-between px-5">
-          <Link to="/" className="font-display text-2xl font-bold tracking-tight">
-            N<span className="text-primary">Prep</span>
+        <div className="flex h-16 items-center justify-between px-4">
+          <Link to="/" className="flex min-w-0 items-center gap-2.5 font-display text-xl font-bold">
+            <img src="/nprep-logo.jpg" alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+            <span className="truncate">NPrep</span>
           </Link>
           <button className="md:hidden" onClick={() => setOpen(false)} aria-label="Close menu"><X className="h-5 w-5" /></button>
         </div>
