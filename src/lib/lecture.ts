@@ -137,6 +137,9 @@ export function playbackMessage(error: any, licenseUrl?: string, drmType?: strin
     try {
       hostname = new URL(String(data[0] ?? "")).hostname;
     } catch {}
+    if (status === 403 && /block access from your country/i.test(typeof data[2] === "string" ? data[2] : "")) {
+      return "NPrep's video service blocked this request because it came from outside India. Turn off any VPN, use an Indian connection, and press Retry playback.";
+    }
     if (status === 403 && /media host is not allowed/i.test(body)) {
       return "The lecture media host is not on the proxy allowlist. Add its CDN domain to the media proxy configuration.";
     }

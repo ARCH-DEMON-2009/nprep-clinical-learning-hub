@@ -46,7 +46,10 @@ function Lecture() {
   const v = lectureData(q.data);
   const { src: mediaSrc, license, drmType, notes, text } = lectureMedia(v);
   const embed = mediaSrc && /youtube\.com|youtu\.be|vimeo\.com/i.test(mediaSrc) ? mediaSrc : undefined;
-  const src = embed || !mediaSrc ? undefined : mediaProxyUrl(mediaSrc);
+  // Play straight from the CDN first: NPrep's CloudFront is geo-restricted, so the
+  // viewer's own (Indian) connection works where an overseas server proxy gets 403.
+  const [viaProxy, setViaProxy] = useState(false);
+  const src = embed || !mediaSrc ? undefined : viaProxy ? mediaProxyUrl(mediaSrc) : mediaSrc;
 
   const stamps: any[] = Array.isArray(v?.stamps) ? v.stamps
     : findArrays(v).find((a) => a.items.some((x) => Object.keys(x).some((k) => /time|start|second/i.test(k))))?.items ?? [];
@@ -120,11 +123,15 @@ function Lecture() {
               if (refreshedSrc && refreshedSrc !== mediaSrc) setAttempt((value) => value + 1);
             });
           }
+          if (!viaProxy && (error?.code === 1002 || [401, 403].includes(status as number) === false && error?.code >= 1000 && error?.code < 2000)) {
+            setViaProxy(true);
+            return;
+          }
           setPlaybackError(playbackMessage(error, license, drmType));
         });
         await player.attach(el);
         if (cancelled) return;
-        if (license) player.configure({ drm: { servers: { [drmKeySystem(drmType)]: mediaProxyUrl(license) } } });
+        if (license) player.configure({ drm: { servers: { [drmKeySystem(drmType)]: viaProxy ? mediaProxyUrl(license) : license } } });
         await player.load(src);
       } catch (error) {
         if (!cancelled) setPlaybackError(playbackMessage(error, license, drmType));
@@ -138,7 +145,7 @@ function Lecture() {
       playerRef.current = null;
       el.pause(); el.removeAttribute("src"); el.load();
     };
-  }, [src, license, attempt]);
+  }, [src, license, attempt, viaProxy]);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -215,11 +222,18 @@ function Lecture() {
 
         {playbackError && <div role="alert" className="space-y-3 border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           <p>{playbackError}</p>
+          <ul className="list-disc space-y-1 pl-5 text-xs text-foreground/80">
+            <li><b>HTTP 403 / blocked country:</b> NPrep's video service only serves India. Use an Indian connection (turn off VPN) and retry.</li>
+            <li><b>DRM / license errors (6xxx):</b> enable protected content in browser settings; Chrome, Edge or Firefox work best. Incognito may block it.</li>
+            <li><b>Network errors (1xxx):</b> the lecture link may have expired — press Retry to fetch a fresh one.</li>
+          </ul>
+          <p className="text-xs text-foreground/70">Mode: {viaProxy ? "via server" : "direct from CDN"}</p>
           <details className="text-xs">
             <summary className="cursor-pointer font-medium">Playback diagnostics (redacted)</summary>
             <pre className="mt-2 whitespace-pre-wrap break-words font-mono">{lectureMediaDiagnostics(q.data, mediaSrc, license, drmType)}</pre>
           </details>
-          <Button variant="outline" onClick={async () => { await q.refetch(); setAttempt((n) => n + 1); }}>Retry playback</Button>
+          <Button variant="outline" onClick={async () => { await q.refetch(); setViaProxy(false); setAttempt((n) => n + 1); }}>Retry playback</Button>
+          {!viaProxy && <Button variant="ghost" className="ml-2" onClick={() => setViaProxy(true)}>Try via server</Button>}
         </div>}
 
         <div className="flex flex-wrap items-start justify-between gap-3">
