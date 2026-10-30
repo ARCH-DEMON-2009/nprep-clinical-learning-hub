@@ -123,7 +123,7 @@ function Lecture() {
               if (refreshedSrc && refreshedSrc !== mediaSrc) setAttempt((value) => value + 1);
             });
           }
-          if (!viaProxy && (error?.code === 1002 || [401, 403].includes(status as number) === false && error?.code >= 1000 && error?.code < 2000)) {
+          if (!viaProxy && error?.code === 1002) {
             setViaProxy(true);
             return;
           }
