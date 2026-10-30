@@ -5,7 +5,12 @@ import { useEffect, useRef, useState } from "react";
 import { ErrorBox, Loading } from "@/components/AppShell";
 import { api, findArrays, findKey, getToken, imageOf, titleOf } from "@/lib/api";
 import { drmKeySystem, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "@/lib/lecture";
-import { mediaProxyUrl } from "@/lib/media-proxy";
+import { mediaProxyUrl, normalizeCloudFrontSignedUrl } from "@/lib/media-proxy";
+
+/** CloudFront only reads Policy/Signature/Key-Pair-Id in the query string. */
+function signedDirectUrl(url: string): string {
+  try { return normalizeCloudFrontSignedUrl(new URL(url)).toString(); } catch { return url; }
+}
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/lecture/$videoId")({
@@ -49,7 +54,7 @@ function Lecture() {
   // Play straight from the CDN first: NPrep's CloudFront is geo-restricted, so the
   // viewer's own (Indian) connection works where an overseas server proxy gets 403.
   const [viaProxy, setViaProxy] = useState(false);
-  const src = embed || !mediaSrc ? undefined : viaProxy ? mediaProxyUrl(mediaSrc) : mediaSrc;
+  const src = embed || !mediaSrc ? undefined : viaProxy ? mediaProxyUrl(mediaSrc) : signedDirectUrl(mediaSrc);
 
   const stamps: any[] = Array.isArray(v?.stamps) ? v.stamps
     : findArrays(v).find((a) => a.items.some((x) => Object.keys(x).some((k) => /time|start|second/i.test(k))))?.items ?? [];
@@ -131,10 +136,27 @@ function Lecture() {
         });
         await player.attach(el);
         if (cancelled) return;
+        if (!viaProxy) {
+          // Segments are requested without the manifest's signature; copy it onto every same-host request.
+          const signed = new URL(src ?? "", window.location.href);
+          const signing = [...signed.searchParams].filter(([k]) => /^(Policy|Signature|Key-Pair-Id|Expires)$/.test(k));
+          player.getNetworkingEngine()?.registerRequestFilter((_type: unknown, request: any) => {
+            request.uris = request.uris.map((uri: string) => {
+              try {
+                const u = new URL(uri, signed);
+                if (u.host !== signed.host) return uri;
+                for (const [k, val] of signing) if (!u.searchParams.has(k)) u.searchParams.set(k, val);
+                return u.toString();
+              } catch { return uri; }
+            });
+          });
+        }
         if (license) player.configure({ drm: { servers: { [drmKeySystem(drmType)]: viaProxy ? mediaProxyUrl(license) : license } } });
         await player.load(src);
-      } catch (error) {
-        if (!cancelled) setPlaybackError(playbackMessage(error, license, drmType));
+      } catch (error: any) {
+        if (cancelled) return;
+        if (!viaProxy && error?.code === 1002) { setViaProxy(true); return; }
+        setPlaybackError(playbackMessage(error, license, drmType));
       }
     };
     void attach();
