@@ -138,7 +138,7 @@ function Lecture() {
         if (cancelled) return;
         if (!viaProxy) {
           // Segments are requested without the manifest's signature; copy it onto every same-host request.
-          const signed = new URL(src);
+          const signed = new URL(src ?? "", window.location.href);
           const signing = [...signed.searchParams].filter(([k]) => /^(Policy|Signature|Key-Pair-Id|Expires)$/.test(k));
           player.getNetworkingEngine()?.registerRequestFilter((_type: unknown, request: any) => {
             request.uris = request.uris.map((uri: string) => {
