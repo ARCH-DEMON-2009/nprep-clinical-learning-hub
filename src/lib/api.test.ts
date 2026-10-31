@@ -15,4 +15,8 @@ describe("api helpers", () => {
   it("finds nested lectures without relying on the wrapper array name", () => {
     expect(firstArray({ payload: { course_content: [{ id: 8, name: "Lecture" }] } })).toEqual([{ id: 8, name: "Lecture" }]);
   });
+  it("recognizes batches and their identifiers", () => {
+    expect(firstArray({ data: { batches: [{ batch_id: 12, batch_name: "Rapid Revision 2.0" }] } })).toEqual([{ batch_id: 12, batch_name: "Rapid Revision 2.0" }]);
+    expect(idOf({ batch_id: 12 })).toBe("12");
+  });
 });

@@ -98,7 +98,7 @@ export function firstArray(x: any): any[] {
   const collections = contentArrays(x);
   if (!collections.length) return [];
   const score = ({ key, items }: { key: string; items: any[] }) => {
-    const keyScore = /(courses?|subjects?|sections?|lectures?|videos?|contents?|modules?)/i.test(key) ? 100 : 0;
+    const keyScore = /(courses?|subjects?|batches?|sections?|lectures?|videos?|contents?|modules?|rapid)/i.test(key) ? 100 : 0;
     const titleScore = items.filter((item) => Object.keys(item).some((name) => /(title|name)$/i.test(name))).length;
     const idScore = items.filter((item) => idOf(item)).length;
     return keyScore + titleScore * 4 + idScore * 2 + Math.min(items.length, 30);
@@ -106,10 +106,10 @@ export function firstArray(x: any): any[] {
   const ranked = collections.filter(({ items }) => items.some((item) => Object.keys(item).length)).sort((a, b) => score(b) - score(a));
   const top = ranked[0];
   if (!top) return [];
-  if (/courses?|subjects?|sections?|lectures?|videos?|contents?|modules?/i.test(top.key)) {
+  if (/courses?|subjects?|batches?|sections?|lectures?|videos?|contents?|modules?|rapid/i.test(top.key)) {
     const ids = new Map<string, any>();
     for (const collection of ranked) {
-      if (collection.key !== top.key && !/(courses?|subjects?|sections?|lectures?|videos?|contents?|modules?)/i.test(collection.key)) continue;
+      if (collection.key !== top.key && !/(courses?|subjects?|batches?|sections?|lectures?|videos?|contents?|modules?|rapid)/i.test(collection.key)) continue;
       for (const item of collection.items) {
         const id = idOf(item);
         if (id) ids.set(id, item);
@@ -121,11 +121,14 @@ export function firstArray(x: any): any[] {
 }
 
 export const titleOf = (o: any): string =>
-  o?.title ?? o?.name ?? o?.subject_name ?? o?.course_name ?? o?.section_name ?? o?.video_title ??
-  o?.test_name ?? o?.subjectName ?? o?.courseName ?? findKey(o, /(title|name)$/i) ?? "Untitled";
+  o?.title ?? o?.name ?? o?.subject_name ?? o?.course_name ?? o?.batch_name ?? o?.batchName ??
+  o?.section_name ?? o?.video_title ?? o?.test_name ?? o?.subjectName ?? o?.courseName ??
+  o?.batchTitle ?? findKey(o, /(title|name)$/i) ?? "Untitled";
 
 export const idOf = (o: any): string | undefined => {
-  const v = o?.id ?? o?._id ?? o?.subjectId ?? o?.courseId ?? o?.video_id ?? o?.videoId ?? o?.subject_id ?? o?.course_id ?? o?.test_id;
+  const v = o?.id ?? o?._id ?? o?.subjectId ?? o?.subject_id ?? o?.courseId ?? o?.course_id ??
+    o?.batchId ?? o?.batch_id ?? o?.videoId ?? o?.video_id ?? o?.lectureId ?? o?.lecture_id ??
+    o?.sectionId ?? o?.section_id ?? o?.test_id ?? findKey(o, /^(id|.*_id)$/i);
   return v == null ? undefined : String(v);
 };
 
