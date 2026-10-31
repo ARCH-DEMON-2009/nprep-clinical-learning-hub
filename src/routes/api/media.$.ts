@@ -159,7 +159,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
     const body = await upstream.clone().text();
     if (/block access from your country/i.test(body)) {
       // NPrep's CDN is India-only; report where this relay ran so the region can be fixed.
-      const region = process.env.VERCEL_REGION
+      const region = process.env["VERCEL_REGION"]
         ?? (request as Request & { cf?: { colo?: string } }).cf?.colo
         ?? "unknown";
       responseHeaders.set("content-type", "text/plain; charset=utf-8");
