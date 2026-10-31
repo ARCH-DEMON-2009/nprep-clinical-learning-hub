@@ -17,7 +17,8 @@ describe("lecture response normalization", () => {
     expect(drmKeySystem("widevine")).toBe("com.widevine.alpha");
     expect(drmKeySystem("fairplay")).toBe("com.apple.fps.1_0");
   });
-  it("allows TPStreams license hosts while rejecting lookalike domains", () => {
+  it("allows NPrep link hosts and TPStreams license hosts", () => {
+    expect(isAllowedMediaHost("links.nprep.in")).toBe(true);
     expect(isAllowedMediaHost("app.tpstreams.com")).toBe(true);
     expect(isAllowedMediaHost("tpstreams.com")).toBe(true);
     expect(isAllowedMediaHost("app.tpstreams.com.attacker.example")).toBe(false);
