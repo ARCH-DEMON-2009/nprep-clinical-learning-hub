@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { drmKeySystem, ensureDrmLicenseContentType, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "./lecture";
-import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, encodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, isNprepLinkResolverUrl, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, mediaProxyUrl, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "./media-proxy";
+import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, embeddedMediaRedirect, encodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, isNprepLinkResolverUrl, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, mediaProxyUrl, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "./media-proxy";
 
 describe("lecture response normalization", () => {
   it("opens a nested video envelope", () => {
@@ -16,6 +16,10 @@ describe("lecture response normalization", () => {
     expect(drmKeySystem(media.drmType)).toBe("com.microsoft.playready");
     expect(drmKeySystem("widevine")).toBe("com.widevine.alpha");
     expect(drmKeySystem("fairplay")).toBe("com.apple.fps.1_0");
+  });
+  it("extracts embedded NPrep resolver destinations", () => {
+    expect(embeddedMediaRedirect(`<meta http-equiv="refresh" content="0; url=https://cdn.example/video.mpd?a=1&amp;b=2">`)).toBe("https://cdn.example/video.mpd?a=1&b=2");
+    expect(embeddedMediaRedirect(`window.location.href = "https://cdn.example/video.m3u8";`)).toBe("https://cdn.example/video.m3u8");
   });
   it("allows NPrep link hosts and TPStreams license hosts", () => {
     expect(isAllowedMediaHost("links.nprep.in")).toBe(true);

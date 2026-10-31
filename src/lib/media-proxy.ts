@@ -31,6 +31,13 @@ export function mediaProxyUrl(target: string): string {
   return `/api/media/relay/${encoded}/`;
 }
 
+export function embeddedMediaRedirect(html: string): string | undefined {
+  const destination = html.match(/http-equiv=["']refresh["'][^>]*content=["'][^"']*url=([^"']+)/i)?.[1]
+    ?? html.match(/(?:window\.)?location(?:\.href)?\s*=\s*["']([^"']+)/i)?.[1]
+    ?? html.match(/(?:href|url)["']?\s*[:=]\s*["'](https?:\/\/[^"']+)/i)?.[1];
+  return destination?.replace(/&amp;/gi, "&").replace(/["']+$/, "");
+}
+
 export function normalizeCloudFrontSignedUrl(target: URL): URL {
   const aliases: Record<string, string> = {
     cloudfrontpolicy: "Policy",

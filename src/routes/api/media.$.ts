@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, isNprepSiteHost, localMediaCookies, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "@/lib/media-proxy";
+import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, embeddedMediaRedirect, ensureMediaPostContentType, isAllowedMediaHost, isNprepSiteHost, localMediaCookies, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "@/lib/media-proxy";
 
 const MEDIA_TOKEN_COOKIE = "nprep_media_token";
 
@@ -116,8 +116,12 @@ async function forward({ request, params }: { request: Request; params: { _splat
         return new Response("Media server could not be reached", { status: 502 });
       }
     }
-    const location = upstream.headers.get("location");
-    if (![301, 302, 303, 307, 308].includes(upstream.status) || !location) break;
+    let location = upstream.headers.get("location");
+    if (!location && isNprepSiteHost(target.hostname) && /^text\/html/i.test(upstream.headers.get("content-type") ?? "")) {
+      const html = await upstream.clone().text();
+      location = embeddedMediaRedirect(html);
+    }
+    if (![301, 302, 303, 307, 308].includes(upstream.status) && !location) break;
     await upstream.body?.cancel();
     if (redirects === 5) return new Response("Too many media redirects", { status: 502 });
     const previousOrigin = target.origin;
@@ -145,6 +149,9 @@ async function forward({ request, params }: { request: Request; params: { _splat
   if (!upstream) return new Response("Media server could not be reached", { status: 502 });
 
   const contentType = upstream.headers.get("content-type") ?? "application/octet-stream";
+  if (isNprepSiteHost(target.hostname) && /^text\/html/i.test(contentType)) {
+    return new Response("Lecture link resolver did not return a media URL", { status: 502 });
+  }
   const responseHeaders = new Headers({
     "content-type": contentType,
     "access-control-allow-origin": "*",
