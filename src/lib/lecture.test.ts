@@ -41,6 +41,9 @@ describe("lecture response normalization", () => {
     expect(ensureDrmLicenseContentType({})).toEqual({ "content-type": "application/octet-stream" });
     expect(ensureDrmLicenseContentType({ "Content-Type": "application/json" })).toEqual({ "Content-Type": "application/json" });
   });
+  it("gives an actionable error for Widevine initialization failure", () => {
+    expect(playbackMessage({ code: 6001 }, undefined, "widevine")).toContain("initialize Widevine");
+  });
   it("uses resolver HTML as an actionable playback error", () => {
     expect(playbackMessage({ code: 1001, data: ["/api/media/relay/x", 502, "Lecture link resolver did not return a media URL"] })).toContain("resolver did not return a media URL");
   });

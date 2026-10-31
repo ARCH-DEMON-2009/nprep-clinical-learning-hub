@@ -110,7 +110,10 @@ function Lecture() {
         playerRef.current = shakaPlayer;
         await shakaPlayer.attach(el);
         shakaPlayer.getNetworkingEngine()?.registerRequestFilter((type: number, request: any) => {
-          if (type === shaka.net.NetworkingEngine.RequestType.LICENSE) request.headers = ensureDrmLicenseContentType(request.headers ?? {});
+          if (type === shaka.net.NetworkingEngine.RequestType.LICENSE) {
+            request.headers = ensureDrmLicenseContentType(request.headers ?? {});
+            if (!Object.keys(request.headers).some((name) => name.toLowerCase() === "accept")) request.headers.Accept = "application/octet-stream";
+          }
         });
         shakaPlayer.addEventListener("error", (event: any) => {
           if (cancelled) return;
@@ -126,7 +129,22 @@ function Lecture() {
           if (!viaProxy && error?.code === 1002) setViaProxy(true);
           else setPlaybackError(playbackMessage(error, license, drmType));
         });
-        if (license) shakaPlayer.configure({ drm: { servers: { [drmKeySystem(drmType)]: license } } });
+        if (license) {
+          const keySystem = drmKeySystem(drmType);
+          if (typeof navigator !== "undefined" && navigator.requestMediaKeySystemAccess) {
+            await navigator.requestMediaKeySystemAccess(keySystem, [{
+              initDataTypes: ["cenc"],
+              distinctiveIdentifier: "optional",
+              persistentState: "optional",
+              videoCapabilities: [{ contentType: "video/mp4; codecs=\"avc1.42E01E\"", robustness: "SW_SECURE_CRYPTO" }],
+              audioCapabilities: [{ contentType: "audio/mp4; codecs=mp4a.40.2", robustness: "SW_SECURE_CRYPTO" }],
+              sessionTypes: ["temporary"],
+            }]).catch(() => undefined);
+          }
+          shakaPlayer.configure({
+            drm: { servers: { [keySystem]: license }, retryParameters: { maxAttempts: 3 } },
+          });
+        }
         await shakaPlayer.load(src);
       } catch (error: any) {
         if (!cancelled) {

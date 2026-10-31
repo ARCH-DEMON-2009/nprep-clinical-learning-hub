@@ -100,6 +100,9 @@ export function playbackMessage(error: any, licenseUrl?: string, drmType?: strin
   if (code === 4036) {
     return "NPrep's video service blocked this request because it came from outside India. Turn off any VPN, use an Indian connection, and press Retry playback.";
   }
+  if (code === 6001) {
+    return "Your browser could not initialize Widevine protected playback. Enable protected content in Chrome or Edge settings, close Incognito/private mode, restart the browser, and retry.";
+  }
   if (code === 6007) {
     const values: unknown[] = [];
     const collect = (value: any, depth = 0) => {
