@@ -149,7 +149,7 @@ function Lecture() {
       playerRef.current = null;
       el.pause(); el.removeAttribute("src"); el.load();
     };
-  }, [src, license, drmType, videoId, mediaSrc, attempt, viaProxy, q]);
+  }, [src, license, drmType, videoId, mediaSrc, attempt, viaProxy]);
 
   if (q.isLoading) return <Loading />;
   if (q.error) return <ErrorBox error={q.error} />;
