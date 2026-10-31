@@ -157,6 +157,18 @@ async function forward({ request, params }: { request: Request; params: { _splat
 
   if (upstream.status === 403) {
     const body = await upstream.clone().text();
+    if (/block access from your country/i.test(body)) {
+      // NPrep's CDN is India-only; report where this relay ran so the region can be fixed.
+      const region = process.env["VERCEL_REGION"]
+        ?? (request as Request & { cf?: { colo?: string } }).cf?.colo
+        ?? "unknown";
+      responseHeaders.set("content-type", "text/plain; charset=utf-8");
+      responseHeaders.delete("content-length");
+      return new Response(`relay region: ${region}. The Amazon CloudFront distribution is configured to block access from your country.`, {
+        status: 403,
+        headers: responseHeaders,
+      });
+    }
     if (/MissingKey|Key-Pair-Id/i.test(body)) {
       responseHeaders.set("content-type", "text/plain; charset=utf-8");
       responseHeaders.delete("content-length");

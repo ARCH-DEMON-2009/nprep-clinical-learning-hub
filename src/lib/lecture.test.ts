@@ -149,3 +149,14 @@ describe("lecture response normalization", () => {
     expect(playbackMessage({ code: 1001, data: ["/api/media/relay/url", 403, "Media host is not allowed"] })).toContain("proxy allowlist");
   });
 });
+describe("geo-blocked relay diagnostics", () => {
+  it("names the relay region when it ran outside India", () => {
+    const msg = playbackMessage({ code: 1001, data: ["https://beta.nprep.site/api/media/relay/x/", 403, "relay region: iad1. The Amazon CloudFront distribution is configured to block access from your country."] });
+    expect(msg).toContain('"iad1"');
+    expect(msg).toContain("bom1");
+  });
+  it("falls back to the VPN hint when the relay already runs in Mumbai", () => {
+    const msg = playbackMessage({ code: 1001, data: ["https://x/", 403, "relay region: bom1. configured to block access from your country."] });
+    expect(msg).toContain("Turn off any VPN");
+  });
+});
