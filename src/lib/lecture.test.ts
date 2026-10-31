@@ -37,6 +37,9 @@ describe("lecture response normalization", () => {
     expect(ensureDrmLicenseContentType({})).toEqual({ "content-type": "application/octet-stream" });
     expect(ensureDrmLicenseContentType({ "Content-Type": "application/json" })).toEqual({ "Content-Type": "application/json" });
   });
+  it("explains the Shaka 4036 region error", () => {
+    expect(playbackMessage({ code: 4036 })).toContain("outside India");
+  });
   it("explains DRM license HTTP failures", () => {
     const message = playbackMessage({ code: 6007, data: ["License request failed", 403, "AccessDenied"] }, "https://license.example/path", "widevine");
     expect(message).toContain("HTTP 403");

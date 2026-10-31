@@ -126,6 +126,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
     if (isNprepSiteHost(previousHostname)) {
       followedNprepRedirect = true;
     }
+    if (target.protocol === "http:") target.protocol = "https:";
     if (target.protocol !== "https:") return new Response("Media redirect must use HTTPS", { status: 502 });
     if (target.origin !== previousOrigin && !isNprepSiteHost(target.hostname.toLowerCase())) {
       headers.delete("authorization");

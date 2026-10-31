@@ -96,7 +96,10 @@ export function lectureMediaDiagnostics(response: unknown, mediaUrl?: string, li
 }
 
 export function playbackMessage(error: any, licenseUrl?: string, drmType?: string): string {
-  const code = error?.code;
+  const code = typeof error?.code === "number" ? error.code : Number(error?.code);
+  if (code === 4036) {
+    return "NPrep's video service blocked this request because it came from outside India. Turn off any VPN, use an Indian connection, and press Retry playback.";
+  }
   if (code === 6007) {
     const values: unknown[] = [];
     const collect = (value: any, depth = 0) => {

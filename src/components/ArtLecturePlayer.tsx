@@ -1,6 +1,6 @@
 import Artplayer from "artplayer";
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import { ensureDrmLicenseContentType } from "@/lib/lecture";
+import { ensureDrmLicenseContentType, playbackMessage } from "@/lib/lecture";
 
 export type LecturePlayerHandle = {
   seek: (seconds: number) => void;
@@ -86,7 +86,7 @@ const ArtLecturePlayer = forwardRef<LecturePlayerHandle, Props>(function ArtLect
                 : "com.widevine.alpha";
             player.configure({ drm: { servers: { [keySystem]: props.license } } });
           }
-          player.addEventListener("error", (event: any) => props.onError?.(`Playback error (${event.detail?.code ?? "unknown"})`));
+          player.addEventListener("error", (event: any) => props.onError?.(playbackMessage(event.detail, props.license, props.drmType)));
           await player.load(url);
         };
       }
