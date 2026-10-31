@@ -37,9 +37,18 @@ const ArtLecturePlayer = forwardRef<LecturePlayerHandle, Props>(function ArtLect
     let cancelled = false;
 
     void import("artplayer").then(async () => {
+      let responseType = "";
+      let responseSample = "";
+      try {
+        const response = await fetch(props.src, { headers: { range: "bytes=0-2047" } });
+        responseType = response.headers.get("content-type") ?? "";
+        responseSample = await response.text();
+      } catch {}
       const lowerUrl = props.src.toLowerCase();
-      const isHls = lowerUrl.includes(".m3u8");
-      const isDash = lowerUrl.includes(".mpd") || Boolean(props.license) || Boolean(props.drmType);
+      const looksLikeHls = /mpegurl/i.test(responseType) || /#extm3u/i.test(responseSample);
+      const looksLikeDash = /dash\+xml/i.test(responseType) || /<mpd[\s>]/i.test(responseSample);
+      const isHls = looksLikeHls || lowerUrl.includes(".m3u8");
+      const isDash = looksLikeDash || lowerUrl.includes(".mpd") || Boolean(props.license) || Boolean(props.drmType);
       const playerType = isHls ? "m3u8" : isDash ? "mpd" : "auto";
 
       const customType: Record<string, (video: HTMLVideoElement, url: string) => void | Promise<void>> = {};
