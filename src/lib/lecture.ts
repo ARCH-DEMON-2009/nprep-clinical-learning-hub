@@ -54,6 +54,12 @@ export function drmKeySystem(drmType?: string): string {
   return "com.widevine.alpha";
 }
 
+export function ensureDrmLicenseContentType(headers: Record<string, string>): Record<string, string> {
+  const contentType = Object.entries(headers).find(([name]) => name.toLowerCase() === "content-type")?.[1]?.trim();
+  if (contentType) return headers;
+  return { ...headers, "content-type": "application/octet-stream" };
+}
+
 export function lectureMediaDiagnostics(response: unknown, mediaUrl?: string, licenseUrl?: string, drmType?: string): string {
   const root = lectureData(response);
   const fields = new Set<string>();

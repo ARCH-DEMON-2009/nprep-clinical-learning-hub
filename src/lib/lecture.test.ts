@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { drmKeySystem, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "./lecture";
+import { drmKeySystem, ensureDrmLicenseContentType, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "./lecture";
 import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, encodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, mediaProxyUrl, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "./media-proxy";
 
 describe("lecture response normalization", () => {
@@ -32,6 +32,8 @@ describe("lecture response normalization", () => {
   it("sets the binary content type for DRM POSTs without overriding explicit types", () => {
     expect(ensureMediaPostContentType(new Headers()).get("content-type")).toBe("application/octet-stream");
     expect(ensureMediaPostContentType(new Headers({ "content-type": "application/json" })).get("content-type")).toBe("application/json");
+    expect(ensureDrmLicenseContentType({})).toEqual({ "content-type": "application/octet-stream" });
+    expect(ensureDrmLicenseContentType({ "Content-Type": "application/json" })).toEqual({ "Content-Type": "application/json" });
   });
   it("explains DRM license HTTP failures", () => {
     const message = playbackMessage({ code: 6007, data: ["License request failed", 403, "AccessDenied"] }, "https://license.example/path", "widevine");

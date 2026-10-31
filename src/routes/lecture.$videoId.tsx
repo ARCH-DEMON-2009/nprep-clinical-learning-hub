@@ -4,7 +4,7 @@ import { CheckCircle2, Download, ExternalLink, FileText, Maximize, RotateCcw, Ro
 import { useEffect, useRef, useState } from "react";
 import { ErrorBox, Loading } from "@/components/AppShell";
 import { api, findArrays, findKey, getToken, imageOf, titleOf } from "@/lib/api";
-import { drmKeySystem, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "@/lib/lecture";
+import { drmKeySystem, ensureDrmLicenseContentType, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "@/lib/lecture";
 import { mediaProxyUrl, normalizeCloudFrontSignedUrl } from "@/lib/media-proxy";
 
 /** CloudFront only reads Policy/Signature/Key-Pair-Id in the query string. */
@@ -151,6 +151,12 @@ function Lecture() {
             });
           });
         }
+        player.getNetworkingEngine()?.registerRequestFilter((type: number, request: any) => {
+          const licenseRequest = shaka.net.NetworkingEngine.RequestType.LICENSE;
+          if (type === licenseRequest) {
+            request.headers = ensureDrmLicenseContentType(request.headers ?? {});
+          }
+        });
         // The license server allows browser requests from any site, so it never needs the relay.
         if (license) player.configure({ drm: { servers: { [drmKeySystem(drmType)]: license } } });
         await player.load(src);
