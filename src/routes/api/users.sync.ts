@@ -7,7 +7,7 @@ async function syncUser({ request }: { request: Request }) {
   const url = process.env.SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVCE_KEY;
   if (!url || !serviceKey) {
-    return new Response("Supabase server configuration is missing", { status: 500 });
+    return new Response("User storage is not configured", { status: 503 });
   }
 
   let body: { mobile?: string; auth?: unknown; profile?: unknown; raw?: unknown };
@@ -25,22 +25,33 @@ async function syncUser({ request }: { request: Request }) {
   const supabase = createClient(url, serviceKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data: existing } = await supabase
+  const { data: existing, error: readError } = await supabase
     .from("nprep_users")
     .select("auth_json,profile_json,raw_data_json")
     .eq("mobile", mobile)
     .maybeSingle();
+  if (readError) return new Response("Could not read existing user data", { status: 500 });
+
+  const mergeJson = (current: unknown, incoming: unknown) => {
+    if (incoming == null) return current && typeof current === "object" ? current : {};
+    if (current && typeof current === "object" && !Array.isArray(current)
+      && incoming && typeof incoming === "object" && !Array.isArray(incoming)) {
+      return { ...current as Record<string, unknown>, ...incoming as Record<string, unknown> };
+    }
+    return incoming;
+  };
 
   const { error } = await supabase.from("nprep_users").upsert({
     mobile,
     country_code: "+91",
-    auth_json: body.auth ?? existing?.auth_json ?? {},
-    profile_json: body.profile ?? existing?.profile_json ?? {},
-    raw_data_json: body.raw ?? existing?.raw_data_json ?? {},
+    auth_json: mergeJson(existing?.auth_json, body.auth),
+    profile_json: mergeJson(existing?.profile_json, body.profile),
+    raw_data_json: mergeJson(existing?.raw_data_json, body.raw),
+    updated_at: new Date().toISOString(),
   }, { onConflict: "mobile" });
 
-  if (error) return new Response(error.message, { status: 500 });
-  return Response.json({ saved: true, mobile });
+  if (error) return new Response("Could not save user data", { status: 500 });
+  return Response.json({ saved: true, mobile }, { headers: { "cache-control": "no-store" } });
 }
 
 export const Route = createFileRoute("/api/users/sync")({
