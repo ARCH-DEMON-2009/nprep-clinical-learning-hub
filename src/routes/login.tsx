@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { api, findKey, setToken } from "@/lib/api";
+import { api, findKey, setToken, syncSupabaseUser } from "@/lib/api";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -37,6 +37,7 @@ function Login() {
     setErr(""); setBusy(true);
     try {
       await api("/auth/request-otp", { method: "POST", body: JSON.stringify({ phone_number: phone, country_code: "+91" }) });
+      void syncSupabaseUser(phone, { raw: { otp_requested_at: new Date().toISOString() } }).catch((syncError) => console.error("Could not save mobile number", syncError));
       setStep("otp"); setTimer(45);
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
@@ -48,6 +49,7 @@ function Login() {
       const token = findKey(res, /^(access_?token|token|accessToken|jwt)$/i) ?? findKey(res, /token/i);
       if (!token) throw new Error("Login succeeded but no token was returned");
       setToken(String(token));
+      void syncSupabaseUser(phone, { auth: res, raw: res }).catch((syncError) => console.error("Could not save user data", syncError));
       navigate({ to: "/", replace: true });
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }

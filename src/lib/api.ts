@@ -6,6 +6,15 @@ export const getToken = () =>
 export const setToken = (t: string) => localStorage.setItem(TOKEN_KEY, t);
 export const clearToken = () => localStorage.removeItem(TOKEN_KEY);
 
+export async function syncSupabaseUser(mobile: string, payload: { auth?: unknown; profile?: unknown; raw?: unknown }) {
+  const response = await fetch("/api/users/sync", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ mobile, ...payload }),
+  });
+  if (!response.ok) throw new Error(await response.text());
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
