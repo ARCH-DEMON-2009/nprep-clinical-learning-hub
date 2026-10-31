@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ErrorBox, Loading, PageTitle, RawData, useMe } from "@/components/AppShell";
 import { ItemCard } from "@/components/ItemCard";
 import { api, findArrays, findKey, imageOf, label, unwrap } from "@/lib/api";
+import { ArrowRight, BookOpen, ClipboardCheck, Library } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,22 +27,32 @@ function Dashboard() {
   const banners = groups.find((g) => /banner|slider|carousel/i.test(g.name));
   const rest = groups.filter((g) => g !== banners);
 
+  const quickActions = [
+    { title: "Subjects & Lectures", detail: "Continue learning", to: "/subjects", icon: BookOpen },
+    { title: "Tests & PYQ", detail: "Practice and review", to: "/tests", icon: ClipboardCheck },
+    { title: "QBank", detail: "Build your accuracy", to: "/qbank", icon: Library },
+  ] as const;
+
   return (
-    <div>
-      <PageTitle title={`Hello${name ? `, ${String(name).split(" ")[0]}` : ""} 👋`} sub="Pick up where you left off." />
+    <div className="mx-auto w-full max-w-[1440px]">
+      <PageTitle title={`Welcome${name ? ` back, ${String(name).split(" ")[0]}` : ""}`} sub="Your learning dashboard" />
       {q.isLoading && <Loading />}
       {q.error && <ErrorBox error={q.error} />}
       {banners && (
-        <div className="-mx-1 mb-8 flex snap-x gap-4 overflow-x-auto px-1 pb-2">
+        <div className="-mx-1 mb-7 flex snap-x gap-4 overflow-x-auto px-1 pb-3">
           {banners.items.map((b, i) => {
             const img = imageOf(b);
-            return img ? <img key={i} src={img} alt="" className="h-40 w-[85%] shrink-0 snap-start rounded-xl object-cover sm:h-52 sm:w-[48%]" /> : null;
+            return img ? <img key={i} src={img} alt="" className="h-44 w-[88%] shrink-0 snap-start rounded-lg object-cover sm:h-56 sm:w-[58%] lg:w-[42%]" /> : null;
           })}
         </div>
       )}
-      <div className="mb-8 grid gap-4 sm:grid-cols-3">
-        {([["Subjects & Lectures", "/subjects"], ["Tests & PYQ", "/tests"], ["QBank", "/qbank"]] as const).map(([t, to]) => (
-          <Link key={to} to={to} className="rounded-xl border border-border bg-accent p-5 font-semibold text-accent-foreground hover:border-primary">{t} →</Link>
+      <div className="mb-9 grid gap-3 sm:grid-cols-3">
+        {quickActions.map(({ title, detail, to, icon: Icon }) => (
+          <Link key={to} to={to} className="group flex items-center gap-4 rounded-lg border border-border bg-card p-4 shadow-sm transition hover:border-primary/50 hover:shadow-md">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground"><Icon className="h-5 w-5" /></span>
+            <span className="min-w-0 flex-1"><span className="block font-semibold">{title}</span><span className="mt-0.5 block text-sm text-muted-foreground">{detail}</span></span>
+            <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+          </Link>
         ))}
       </div>
       {rest.map((g) => (

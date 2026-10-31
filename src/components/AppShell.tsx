@@ -2,7 +2,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, ClipboardList, LayoutDashboard, Library, LogOut, Menu, Moon, Sun, User, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { api, clearToken, findKey, getToken } from "@/lib/api";
+import { api, clearToken, findKey, getToken, syncSupabaseUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -33,6 +33,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     else setReady(true);
   }, [path, navigate]);
   useEffect(() => setOpen(false), [path]);
+  useEffect(() => {
+    if (!me.data) return;
+    const phone = findKey(me.data, /phone|mobile/i);
+    if (typeof phone === "string" || typeof phone === "number") {
+      void syncSupabaseUser(String(phone), { profile: me.data, raw: me.data }).catch((syncError) => console.error("Could not save profile data", syncError));
+    }
+  }, [me.data]);
 
   const toggleTheme = () => {
     const d = !dark;
@@ -56,9 +63,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
       >
         <div className="flex h-16 items-center justify-between px-4">
-          <Link to="/" className="flex min-w-0 items-center gap-2.5 font-display text-xl font-bold">
+          <Link to="/" className="flex min-w-0 items-center gap-2.5">
             <img src="/nprep-logo.jpg" alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" />
-            <span className="truncate">NPrep</span>
+            <span className="font-display text-xl font-bold tracking-tight">NPrep</span>
           </Link>
           <button className="md:hidden" onClick={() => setOpen(false)} aria-label="Close menu"><X className="h-5 w-5" /></button>
         </div>
@@ -88,7 +95,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
         </header>
-        <main className="flex-1 p-4 md:p-8">{children}</main>
+        <main className="flex-1 p-4 md:px-8 md:py-7 lg:px-10">{children}</main>
       </div>
     </div>
   );
@@ -96,9 +103,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 export function PageTitle({ title, sub }: { title: string; sub?: string | undefined }) {
   return (
-    <div className="mb-6">
-      <h1 className="font-display text-3xl font-bold tracking-tight">{title}</h1>
-      {sub && <p className="mt-1 text-muted-foreground">{sub}</p>}
+    <div className="mb-7">
+      <h1 className="font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{title}</h1>
+      {sub && <p className="mt-2 text-sm text-muted-foreground sm:text-base">{sub}</p>}
     </div>
   );
 }

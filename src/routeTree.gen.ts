@@ -19,6 +19,7 @@ import { Route as SubjectsIndexRouteImport } from './routes/subjects.index'
 import { Route as SubjectsSubjectIdRouteImport } from './routes/subjects.$subjectId'
 import { Route as ApiMediaSplatRouteImport } from './routes/api/media.$'
 import { Route as ApiNprepSplatRouteImport } from './routes/api/nprep.$'
+import { Route as ApiUsersSyncRouteImport } from './routes/api/users.sync'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -70,6 +71,11 @@ const ApiNprepSplatRoute = ApiNprepSplatRouteImport.update({
   path: '/api/nprep/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUsersSyncRoute = ApiUsersSyncRouteImport.update({
+  id: '/api/users/sync',
+  path: '/api/users/sync',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/subjects/': typeof SubjectsIndexRoute
   '/api/media/$': typeof ApiMediaSplatRoute
   '/api/nprep/$': typeof ApiNprepSplatRoute
+  '/api/users/sync': typeof ApiUsersSyncRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/subjects': typeof SubjectsIndexRoute
   '/api/media/$': typeof ApiMediaSplatRoute
   '/api/nprep/$': typeof ApiNprepSplatRoute
+  '/api/users/sync': typeof ApiUsersSyncRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/subjects/': typeof SubjectsIndexRoute
   '/api/media/$': typeof ApiMediaSplatRoute
   '/api/nprep/$': typeof ApiNprepSplatRoute
+  '/api/users/sync': typeof ApiUsersSyncRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/subjects/'
     | '/api/media/$'
     | '/api/nprep/$'
+    | '/api/users/sync'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/subjects'
     | '/api/media/$'
     | '/api/nprep/$'
+    | '/api/users/sync'
   id:
     | '__root__'
     | '/'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/subjects/'
     | '/api/media/$'
     | '/api/nprep/$'
+    | '/api/users/sync'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -158,6 +170,7 @@ export interface RootRouteChildren {
   SubjectsIndexRoute: typeof SubjectsIndexRoute
   ApiMediaSplatRoute: typeof ApiMediaSplatRoute
   ApiNprepSplatRoute: typeof ApiNprepSplatRoute
+  ApiUsersSyncRoute: typeof ApiUsersSyncRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -232,6 +245,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiNprepSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/users/sync': {
+      id: '/api/users/sync'
+      path: '/api/users/sync'
+      fullPath: '/api/users/sync'
+      preLoaderRoute: typeof ApiUsersSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -246,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   SubjectsIndexRoute: SubjectsIndexRoute,
   ApiMediaSplatRoute: ApiMediaSplatRoute,
   ApiNprepSplatRoute: ApiNprepSplatRoute,
+  ApiUsersSyncRoute: ApiUsersSyncRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
