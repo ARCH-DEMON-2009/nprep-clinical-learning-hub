@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ErrorBox, Loading, PageTitle } from "@/components/AppShell";
 import { ItemCard } from "@/components/ItemCard";
-import { api, firstArray, idOf } from "@/lib/api";
+import { api, contentArrays, firstArray, idOf, titleOf } from "@/lib/api";
 import { RawData } from "@/components/AppShell";
 
 export const Route = createFileRoute("/subjects/")({
@@ -21,8 +21,26 @@ export const Route = createFileRoute("/subjects/")({
 
 function Subjects() {
   const nav = useNavigate();
-  const q = useQuery({ queryKey: ["subjects"], queryFn: () => api("/video/subjects") });
-  const items = firstArray(q.data);
+  const q = useQuery({
+    queryKey: ["subjects-and-batches"],
+    queryFn: async () => Promise.allSettled([
+      api("/video/subjects"),
+      api("/video/batches"),
+      api("/video/courses"),
+    ]),
+  });
+  const fulfilled = (q.data ?? []).flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+  const subjects = firstArray(fulfilled[0]);
+  const batches = fulfilled.flatMap((payload) => contentArrays(payload)
+    .filter(({ key, items }) => /batch|course|rapid/i.test(key) && items.length)
+    .flatMap(({ items }) => items));
+  const seen = new Set<string>();
+  const items = [...subjects, ...batches].filter((item) => {
+    const id = idOf(item) ?? `${titleOf(item)}-${item?.type ?? ""}`;
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
   return (
     <div>
       <PageTitle title="Subjects" sub={items.length ? `${items.length} subjects` : undefined} />

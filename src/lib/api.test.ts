@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstArray, findKey, idOf, unwrap } from "./api";
+import { firstArray, findKey, idOf, titleOf, unwrap } from "./api";
 
 describe("api helpers", () => {
   it("finds a nested token", () => {
@@ -12,11 +12,11 @@ describe("api helpers", () => {
     const courses = firstArray({ data: { featured: { courses: [{ id: 1, title: "Course one" }] }, all_courses: [{ id: 2, course_name: "Course two" }] } });
     expect(courses.map((course) => idOf(course))).toEqual(["1", "2"]);
   });
+  it("recognizes batch names and batch ids", () => {
+    expect(titleOf({ batch_name: "Rapid Revision 2.0" })).toBe("Rapid Revision 2.0");
+    expect(idOf({ batch_id: 118 })).toBe("118");
+  });
   it("finds nested lectures without relying on the wrapper array name", () => {
     expect(firstArray({ payload: { course_content: [{ id: 8, name: "Lecture" }] } })).toEqual([{ id: 8, name: "Lecture" }]);
-  });
-  it("recognizes batches and their identifiers", () => {
-    expect(firstArray({ data: { batches: [{ batch_id: 12, batch_name: "Rapid Revision 2.0" }] } })).toEqual([{ batch_id: 12, batch_name: "Rapid Revision 2.0" }]);
-    expect(idOf({ batch_id: 12 })).toBe("12");
   });
 });

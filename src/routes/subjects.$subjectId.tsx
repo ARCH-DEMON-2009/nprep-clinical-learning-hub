@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, ChevronDown, Clock, Lock, PlayCircle, Search, Unlock } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ErrorBox, Loading, PageTitle } from "@/components/AppShell";
-import { api, contentArrays, firstArray, idOf, imageOf, titleOf } from "@/lib/api";
+import { api, contentArrays, findArrays, firstArray, idOf, imageOf, titleOf } from "@/lib/api";
 
 export const Route = createFileRoute("/subjects/$subjectId")({
   head: () => ({
@@ -89,18 +89,16 @@ function Sections({ courseId, course }: { courseId: string; course?: any }) {
           /videos?|lectures?|contents?|items/i.test(key) && Array.isArray(value)
             ? value.filter((item) => item && typeof item === "object")
             : []);
-        const nestedCollections = contentArrays(s).filter(({ key }) => /videos?|lectures?|contents?|items|course.?content/i.test(key));
-        const nestedVideos = nestedCollections.flatMap(({ items }) => items);
-        const combined = [...knownVideos, ...nestedVideos];
-        const unique = new Map<string, any>();
-        for (const video of combined) {
-          const key = idOf(video) ?? JSON.stringify(video);
-          unique.set(key, video);
+        const nestedVideos = contentArrays(s)
+          .filter(({ key }) => /videos?|lectures?|contents?|items/i.test(key))
+          .flatMap(({ items }) => items);
+        const fallbackVideos = findArrays(s).flatMap((collection) => collection.items);
+        const seenVideos = new Map<string, any>();
+        for (const video of [...knownVideos, ...nestedVideos, ...fallbackVideos]) {
+          const key = idOf(video) ?? `${titleOf(video)}-${String(Object.values(video).join("|"))}`;
+          if (!seenVideos.has(key)) seenVideos.set(key, video);
         }
-        const videos: any[] = [...unique.values()].filter((video) => {
-          if (idOf(video)) return true;
-          return Object.keys(video).some((key) => /title|name|video|lecture|duration|time/i.test(key));
-        });
+        const videos: any[] = [...seenVideos.values()];
         const kept = videos.filter((v) => {
           if (term && !String(titleOf(v)).toLowerCase().includes(term)) return false;
           if (filter === "free" && !v?.is_free) return false;
