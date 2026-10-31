@@ -4,8 +4,9 @@ import { CheckCircle2, Download, ExternalLink, FileText, Maximize, RotateCcw, Ro
 import { useEffect, useRef, useState } from "react";
 import { ErrorBox, Loading } from "@/components/AppShell";
 import { api, findArrays, findKey, getToken, imageOf, titleOf } from "@/lib/api";
-import { drmKeySystem, ensureDrmLicenseContentType, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "@/lib/lecture";
+import { lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "@/lib/lecture";
 import { isNprepLinkResolverUrl, mediaProxyUrl, normalizeCloudFrontSignedUrl } from "@/lib/media-proxy";
+import ArtLecturePlayer, { type LecturePlayerHandle } from "@/components/ArtLecturePlayer";
 
 /** CloudFront only reads Policy/Signature/Key-Pair-Id in the query string. */
 function signedDirectUrl(url: string): string {
@@ -62,8 +63,7 @@ function Lecture() {
   const nextId = v?.next_video_id != null ? String(v.next_video_id) : undefined;
   const educator = v?.educator ?? v?.faculty ?? v?.teacher ?? v?.instructor;
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const playerRef = useRef<any>(null);
+  const playerRef = useRef<LecturePlayerHandle>(null);
   const refreshedVideoRef = useRef<string | null>(null);
   const [tab, setTab] = useState<"chapters" | "notes">("chapters");
   const [pdf, setPdf] = useState<string>();
@@ -83,135 +83,34 @@ function Lecture() {
     return () => { cancelled = true; };
   }, [text]);
 
-  // Configure DRM before loading; all browser-only player imports stay in effects.
   useEffect(() => {
-    const el = videoRef.current;
-    if (!el || !src) return;
-    let cancelled = false;
-    let player: any;
     setPlaybackError(""); setTime(0); setDuration(0); setSpeed(1);
-    const onError = () => setPlaybackError("The browser could not play this video. Try again to refresh the lecture link.");
-    el.addEventListener("error", onError);
-    const attach = async () => {
-      try {
-        const token = getToken();
-        if (token) {
-          const session = await fetch("/api/media/session", {
-            method: "POST",
-            headers: { authorization: `Bearer ${token}` },
-          });
-          if (!session.ok) throw new Error("Could not authorize lecture playback");
-        }
-        if (cancelled) return;
-        if (/\.(mp4|webm)(?:[?#]|$)/i.test(mediaSrc ?? "") && !license) {
-          el.src = src ?? "";
-          el.load();
-          return;
-        }
-        const imported = await import("shaka-player");
-        if (cancelled) return;
-        const shaka = imported.default;
-        shaka.polyfill.installAll();
-        if (!shaka.Player.isBrowserSupported()) throw new Error("Unsupported browser");
-        player = new shaka.Player();
-        playerRef.current = player;
-        player.addEventListener("error", (event: any) => {
-          if (cancelled) return;
-          const error = event.detail;
-          const details = Array.isArray(error?.data) ? error.data : [];
-          const status = Number.isInteger(details[1]) ? details[1] : undefined;
-          if ([401, 403].includes(status) && refreshedVideoRef.current !== videoId) {
-            refreshedVideoRef.current = videoId;
-            void q.refetch().then((result) => {
-              if (cancelled || !result.data) return;
-              const refreshedSrc = lectureMedia(lectureData(result.data)).src;
-              if (refreshedSrc && refreshedSrc !== mediaSrc) setAttempt((value) => value + 1);
-            });
-          }
-          if (!viaProxy && error?.code === 1002) {
-            setViaProxy(true);
-            return;
-          }
-          setPlaybackError(playbackMessage(error, license, drmType));
-        });
-        await player.attach(el);
-        if (cancelled) return;
-        if (!viaProxy) {
-          // Segments are requested without the manifest's signature; copy it onto every same-host request.
-          const signed = new URL(src ?? "", window.location.href);
-          const signing = [...signed.searchParams].filter(([k]) => /^(Policy|Signature|Key-Pair-Id|Expires)$/.test(k));
-          player.getNetworkingEngine()?.registerRequestFilter((_type: unknown, request: any) => {
-            request.uris = request.uris.map((uri: string) => {
-              try {
-                const u = new URL(uri, signed);
-                if (u.host !== signed.host) return uri;
-                for (const [k, val] of signing) if (!u.searchParams.has(k)) u.searchParams.set(k, val);
-                return u.toString();
-              } catch { return uri; }
-            });
-          });
-        }
-        player.getNetworkingEngine()?.registerRequestFilter((type: number, request: any) => {
-          const licenseRequest = shaka.net.NetworkingEngine.RequestType.LICENSE;
-          if (type === licenseRequest) {
-            request.headers = ensureDrmLicenseContentType(request.headers ?? {});
-          }
-        });
-        // The license server allows browser requests from any site, so it never needs the relay.
-        if (license) player.configure({ drm: { servers: { [drmKeySystem(drmType)]: license } } });
-        await player.load(src);
-      } catch (error: any) {
-        if (cancelled) return;
-        if (!viaProxy && error?.code === 1002) { setViaProxy(true); return; }
-        setPlaybackError(playbackMessage(error, license, drmType));
-      }
-    };
-    void attach();
-    return () => {
-      cancelled = true;
-      el.removeEventListener("error", onError);
-      void player?.destroy();
-      playerRef.current = null;
-      el.pause(); el.removeAttribute("src"); el.load();
-    };
-  }, [src, license, attempt, viaProxy]);
-
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    const onTime = () => setTime(el.currentTime);
-    const onDur = () => setDuration(el.duration);
-    el.addEventListener("timeupdate", onTime);
-    el.addEventListener("durationchange", onDur);
-    return () => {
-      el.removeEventListener("timeupdate", onTime);
-      el.removeEventListener("durationchange", onDur);
-    };
-  }, [src]);
+  }, [src, attempt, viaProxy]);
 
   if (q.isLoading) return <Loading />;
   if (q.error) return <ErrorBox error={q.error} />;
 
   const seek = (c: any) => {
     const t = findKey(c, /time|start|second/i);
-    if (videoRef.current && t != null) {
-      videoRef.current.currentTime = toSeconds(t);
-      void videoRef.current.play().catch(() => setPlaybackError("Press Play to continue from this chapter."));
+    if (t != null) {
+      playerRef.current?.seek(toSeconds(t));
+      void playerRef.current?.getVideo()?.play().catch(() => setPlaybackError("Press Play to continue from this chapter."));
     }
   };
   const skip = (delta: number) => {
-    const el = videoRef.current;
+    const el = playerRef.current?.getVideo();
     if (el) el.currentTime = Math.max(0, Math.min(el.duration || Infinity, el.currentTime + delta));
   };
   const changeSpeed = () => {
     const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length] ?? 1;
     setSpeed(next);
-    if (videoRef.current) videoRef.current.playbackRate = next;
+    const el = playerRef.current?.getVideo();
+    if (el) el.playbackRate = next;
   };
   const fullscreen = () => {
-    const el = videoRef.current;
-    if (el?.requestFullscreen) el.requestFullscreen();
-    else (el as any)?.webkitEnterFullscreen?.();
+    const player = document.querySelector<HTMLElement>(".nprep-art-player");
+    if (player?.requestFullscreen) void player.requestFullscreen();
+    else (player as HTMLElement & { webkitRequestFullscreen?: () => void })?.webkitRequestFullscreen?.();
   };
 
   return (
@@ -219,7 +118,8 @@ function Lecture() {
       <div className="min-w-0 space-y-5">
         <div className="overflow-hidden rounded-xl bg-foreground">
           <div className={text && !src && !embed ? "p-6 text-background" : "aspect-video"}>
-            {src ? <video ref={videoRef} controls playsInline poster={imageOf(v)} className="h-full w-full" />
+            {src ? <ArtLecturePlayer ref={playerRef} src={src} poster={imageOf(v)} title={titleOf(v)} license={license} drmType={drmType}
+              onTimeUpdate={setTime} onDurationChange={setDuration} onError={setPlaybackError} />
               : embed ? <iframe src={embed} className="h-full w-full" allow="autoplay; fullscreen" allowFullScreen title="Lecture" />
               : text ? <article className="space-y-3 break-words" dangerouslySetInnerHTML={{ __html: safeText }} />
               : <div className="flex h-full items-center justify-center text-background">Video not available</div>}
