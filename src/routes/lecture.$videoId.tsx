@@ -4,9 +4,8 @@ import { CheckCircle2, Download, ExternalLink, FileText, Maximize, RotateCcw, Ro
 import { useEffect, useRef, useState } from "react";
 import { ErrorBox, Loading } from "@/components/AppShell";
 import { api, findArrays, findKey, getToken, imageOf, titleOf } from "@/lib/api";
-import { lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "@/lib/lecture";
+import { drmKeySystem, ensureDrmLicenseContentType, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "@/lib/lecture";
 import { isNprepLinkResolverUrl, mediaProxyUrl, normalizeCloudFrontSignedUrl } from "@/lib/media-proxy";
-import ArtLecturePlayer, { type LecturePlayerHandle } from "@/components/ArtLecturePlayer";
 
 /** CloudFront only reads Policy/Signature/Key-Pair-Id in the query string. */
 function signedDirectUrl(url: string): string {
@@ -63,7 +62,8 @@ function Lecture() {
   const nextId = v?.next_video_id != null ? String(v.next_video_id) : undefined;
   const educator = v?.educator ?? v?.faculty ?? v?.teacher ?? v?.instructor;
 
-  const playerRef = useRef<LecturePlayerHandle>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<any>(null);
   const refreshedVideoRef = useRef<string | null>(null);
   const [tab, setTab] = useState<"chapters" | "notes">("chapters");
   const [pdf, setPdf] = useState<string>();
@@ -84,8 +84,72 @@ function Lecture() {
   }, [text]);
 
   useEffect(() => {
+    const el = videoRef.current;
+    if (!el || !src) return;
+    let cancelled = false;
+    let shakaPlayer: any;
     setPlaybackError(""); setTime(0); setDuration(0); setSpeed(1);
-  }, [src, attempt, viaProxy]);
+
+    const attach = async () => {
+      try {
+        const token = getToken();
+        if (token) {
+          const session = await fetch("/api/media/session", { method: "POST", headers: { authorization: `Bearer ${token}` } });
+          if (!session.ok) throw new Error("Could not authorize lecture playback");
+        }
+        if (/\.(mp4|webm)(?:[?#]|$)/i.test(mediaSrc ?? "") && !license) {
+          el.src = src;
+          el.load();
+          return;
+        }
+        const imported = await import("shaka-player");
+        const shaka = imported.default;
+        shaka.polyfill.installAll();
+        if (!shaka.Player.isBrowserSupported()) throw new Error("Unsupported browser");
+        shakaPlayer = new shaka.Player();
+        playerRef.current = shakaPlayer;
+        await shakaPlayer.attach(el);
+        shakaPlayer.getNetworkingEngine()?.registerRequestFilter((type: number, request: any) => {
+          if (type === shaka.net.NetworkingEngine.RequestType.LICENSE) request.headers = ensureDrmLicenseContentType(request.headers ?? {});
+        });
+        shakaPlayer.addEventListener("error", (event: any) => {
+          if (cancelled) return;
+          const error = event.detail;
+          const status = Array.isArray(error?.data) ? error.data.find((value: unknown) => typeof value === "number" && value >= 400 && value < 600) : undefined;
+          if ([401, 403].includes(status) && refreshedVideoRef.current !== videoId) {
+            refreshedVideoRef.current = videoId;
+            void q.refetch().then((result) => {
+              const refreshed = lectureMedia(lectureData(result.data)).src;
+              if (refreshed && refreshed !== mediaSrc) setAttempt((value) => value + 1);
+            });
+          }
+          if (!viaProxy && error?.code === 1002) setViaProxy(true);
+          else setPlaybackError(playbackMessage(error, license, drmType));
+        });
+        if (license) shakaPlayer.configure({ drm: { servers: { [drmKeySystem(drmType)]: license } } });
+        await shakaPlayer.load(src);
+      } catch (error: any) {
+        if (!cancelled) {
+          if (!viaProxy && error?.code === 1002) setViaProxy(true);
+          else setPlaybackError(playbackMessage(error, license, drmType));
+        }
+      }
+    };
+    void attach();
+
+    const onTime = () => setTime(el.currentTime);
+    const onDuration = () => setDuration(el.duration);
+    el.addEventListener("timeupdate", onTime);
+    el.addEventListener("durationchange", onDuration);
+    return () => {
+      cancelled = true;
+      el.removeEventListener("timeupdate", onTime);
+      el.removeEventListener("durationchange", onDuration);
+      void shakaPlayer?.destroy();
+      playerRef.current = null;
+      el.pause(); el.removeAttribute("src"); el.load();
+    };
+  }, [src, license, drmType, videoId, mediaSrc, attempt, viaProxy, q]);
 
   if (q.isLoading) return <Loading />;
   if (q.error) return <ErrorBox error={q.error} />;
@@ -93,24 +157,25 @@ function Lecture() {
   const seek = (c: any) => {
     const t = findKey(c, /time|start|second/i);
     if (t != null) {
-      playerRef.current?.seek(toSeconds(t));
-      void playerRef.current?.getVideo()?.play().catch(() => setPlaybackError("Press Play to continue from this chapter."));
+      if (videoRef.current) {
+        videoRef.current.currentTime = toSeconds(t);
+        void videoRef.current.play().catch(() => setPlaybackError("Press Play to continue from this chapter."));
+      }
     }
   };
   const skip = (delta: number) => {
-    const el = playerRef.current?.getVideo();
+    const el = videoRef.current;
     if (el) el.currentTime = Math.max(0, Math.min(el.duration || Infinity, el.currentTime + delta));
   };
   const changeSpeed = () => {
     const next = SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length] ?? 1;
     setSpeed(next);
-    const el = playerRef.current?.getVideo();
-    if (el) el.playbackRate = next;
+    if (videoRef.current) videoRef.current.playbackRate = next;
   };
   const fullscreen = () => {
-    const player = document.querySelector<HTMLElement>(".nprep-art-player");
+    const player = videoRef.current;
     if (player?.requestFullscreen) void player.requestFullscreen();
-    else (player as HTMLElement & { webkitRequestFullscreen?: () => void })?.webkitRequestFullscreen?.();
+    else (player as HTMLVideoElement & { webkitEnterFullscreen?: () => void })?.webkitEnterFullscreen?.();
   };
 
   return (
@@ -118,8 +183,7 @@ function Lecture() {
       <div className="min-w-0 space-y-5">
         <div className="overflow-hidden rounded-xl bg-foreground">
           <div className={text && !src && !embed ? "p-6 text-background" : "aspect-video"}>
-            {src ? <ArtLecturePlayer ref={playerRef} src={src} poster={imageOf(v)} title={titleOf(v)} license={license} drmType={drmType}
-              onTimeUpdate={setTime} onDurationChange={setDuration} onError={setPlaybackError} />
+            {src ? <video ref={videoRef} controls playsInline poster={imageOf(v)} className="h-full w-full bg-black" />
               : embed ? <iframe src={embed} className="h-full w-full" allow="autoplay; fullscreen" allowFullScreen title="Lecture" />
               : text ? <article className="space-y-3 break-words" dangerouslySetInnerHTML={{ __html: safeText }} />
               : <div className="flex h-full items-center justify-center text-background">Video not available</div>}
