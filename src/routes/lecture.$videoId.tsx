@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ErrorBox, Loading } from "@/components/AppShell";
 import { api, findArrays, findKey, getToken, imageOf, titleOf } from "@/lib/api";
 import { drmKeySystem, ensureDrmLicenseContentType, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "@/lib/lecture";
-import { mediaProxyUrl, normalizeCloudFrontSignedUrl } from "@/lib/media-proxy";
+import { isNprepLinkResolverUrl, mediaProxyUrl, normalizeCloudFrontSignedUrl } from "@/lib/media-proxy";
 
 /** CloudFront only reads Policy/Signature/Key-Pair-Id in the query string. */
 function signedDirectUrl(url: string): string {
@@ -53,7 +53,7 @@ function Lecture() {
   const embed = mediaSrc && /youtube\.com|youtu\.be|vimeo\.com/i.test(mediaSrc) ? mediaSrc : undefined;
   // Play straight from the CDN first: NPrep's CloudFront is geo-restricted, so the
   // viewer's own (Indian) connection works where an overseas server proxy gets 403.
-  const [viaProxy, setViaProxy] = useState(false);
+  const [viaProxy, setViaProxy] = useState(() => isNprepLinkResolverUrl(mediaSrc ?? ""));
   const src = embed || !mediaSrc ? undefined : viaProxy ? mediaProxyUrl(mediaSrc) : signedDirectUrl(mediaSrc);
 
   const stamps: any[] = Array.isArray(v?.stamps) ? v.stamps

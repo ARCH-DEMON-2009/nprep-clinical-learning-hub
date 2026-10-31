@@ -89,6 +89,14 @@ export function isAllowedMediaHost(hostname: string): boolean {
   return MEDIA_HOSTS.some((host) => normalizedHost === host || normalizedHost.endsWith(`.${host}`));
 }
 
+export function isNprepLinkResolverUrl(url: string): boolean {
+  try {
+    return new URL(url).hostname.toLowerCase() === "links.nprep.in";
+  } catch {
+    return false;
+  }
+}
+
 export function isNprepSiteHost(hostname: string): boolean {
   const normalizedHost = hostname.toLowerCase();
   return normalizedHost === "nprep.in" || normalizedHost.endsWith(".nprep.in")
