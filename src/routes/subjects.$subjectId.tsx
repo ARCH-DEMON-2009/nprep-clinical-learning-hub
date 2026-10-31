@@ -36,7 +36,17 @@ const isDone = (v: any): boolean => {
 
 function Courses() {
   const { subjectId } = Route.useParams();
-  const q = useQuery({ queryKey: ["courses", subjectId], queryFn: () => api(`/video/courses?subjectId=${subjectId}`) });
+  const q = useQuery({
+    queryKey: ["courses", subjectId],
+    queryFn: async () => {
+      const responses = await Promise.allSettled([
+        api(`/video/courses?subjectId=${subjectId}`),
+        api(`/video/courses?batchId=${subjectId}`),
+        api(`/video/courses?courseId=${subjectId}`),
+      ]);
+      return responses.flatMap((response) => response.status === "fulfilled" ? [response.value] : []);
+    },
+  });
   const courses = firstArray(q.data);
   const [active, setActive] = useState<string>();
   const current = active ?? idOf(courses[0]);
@@ -73,7 +83,16 @@ function Courses() {
 }
 
 function Sections({ courseId, course }: { courseId: string; course?: any }) {
-  const q = useQuery({ queryKey: ["sections", courseId], queryFn: () => api(`/video/sections?courseId=${courseId}`) });
+  const q = useQuery({
+    queryKey: ["sections", courseId],
+    queryFn: async () => {
+      const responses = await Promise.allSettled([
+        api(`/video/sections?courseId=${courseId}`),
+        api(`/video/sections?batchId=${courseId}`),
+      ]);
+      return responses.flatMap((response) => response.status === "fulfilled" ? [response.value] : []);
+    },
+  });
   const sections = firstArray(q.data);
   const [open, setOpen] = useState<number | null>(0);
   const [search, setSearch] = useState("");

@@ -31,11 +31,18 @@ function Subjects() {
   });
   const fulfilled = (q.data ?? []).flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
   const subjects = firstArray(fulfilled[0]);
-  const batches = fulfilled.flatMap((payload) => contentArrays(payload)
-    .filter(({ key, items }) => /batch|course|rapid/i.test(key) && items.length)
+  const batches = fulfilled.flatMap((payload, payloadIndex) => contentArrays(payload)
+    .filter(({ key, items }) => (payloadIndex === 1 && /batch|rapid/i.test(key))
+      || (payloadIndex === 2 && /course/i.test(key))
+      || items.some((item) => item?.batch_id != null || item?.batchId != null || /rapid revision/i.test(titleOf(item))))
     .flatMap(({ items }) => items));
   const seen = new Set<string>();
-  const items = [...subjects, ...batches].filter((item) => {
+  const subjectsOnly = subjects.filter((item) => item && !batches.some((batch) => idOf(batch) === idOf(item)));
+  const batchItems = batches.filter((item) => item && (item.batch_id != null || item.batchId != null || /batch|rapid/i.test(Object.keys(item).join(" "))));
+  const courseItems = [...batches, ...fulfilled.flatMap((payload) => contentArrays(payload)
+    .filter(({ key }) => /course/i.test(key))
+    .flatMap(({ items }) => items))].filter((item) => item && !batchItems.includes(item) && /course/i.test(Object.keys(item).join(" ")));
+  const items = [...subjectsOnly, ...batchItems, ...courseItems].filter((item) => {
     const id = idOf(item) ?? `${titleOf(item)}-${item?.type ?? ""}`;
     if (!id || seen.has(id)) return false;
     seen.add(id);
