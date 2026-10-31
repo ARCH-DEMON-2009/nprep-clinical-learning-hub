@@ -151,7 +151,8 @@ function Lecture() {
             });
           });
         }
-        if (license) player.configure({ drm: { servers: { [drmKeySystem(drmType)]: viaProxy ? mediaProxyUrl(license) : license } } });
+        // The license server allows browser requests from any site, so it never needs the relay.
+        if (license) player.configure({ drm: { servers: { [drmKeySystem(drmType)]: license } } });
         await player.load(src);
       } catch (error: any) {
         if (cancelled) return;

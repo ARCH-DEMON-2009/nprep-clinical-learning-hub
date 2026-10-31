@@ -137,7 +137,12 @@ export function playbackMessage(error: any, licenseUrl?: string, drmType?: strin
     try {
       hostname = new URL(String(data[0] ?? "")).hostname;
     } catch {}
-    if (status === 403 && /block access from your country/i.test(typeof data[2] === "string" ? data[2] : "")) {
+    const rawBody = typeof data[2] === "string" ? data[2] : "";
+    if (status === 403 && /block access from your country/i.test(rawBody)) {
+      const region = rawBody.match(/relay region:\s*([a-z0-9-]+)/i)?.[1];
+      if (region && region.toLowerCase() !== "bom1") {
+        return `NPrep's video service only serves India, but this website's video relay ran in server region "${region}" (outside India). Set the hosting function region to Mumbai (bom1), redeploy, then press Retry playback.`;
+      }
       return "NPrep's video service blocked this request because it came from outside India. Turn off any VPN, use an Indian connection, and press Retry playback.";
     }
     if (status === 403 && /media host is not allowed/i.test(body)) {
