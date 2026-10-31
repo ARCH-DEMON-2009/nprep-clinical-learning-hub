@@ -112,7 +112,6 @@ function Lecture() {
         shakaPlayer.getNetworkingEngine()?.registerRequestFilter((type: number, request: any) => {
           if (type === shaka.net.NetworkingEngine.RequestType.LICENSE) {
             request.headers = ensureDrmLicenseContentType(request.headers ?? {});
-            if (!Object.keys(request.headers).some((name) => name.toLowerCase() === "accept")) request.headers.Accept = "application/octet-stream";
           }
         });
         shakaPlayer.addEventListener("error", (event: any) => {

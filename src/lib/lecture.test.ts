@@ -40,6 +40,7 @@ describe("lecture response normalization", () => {
     expect(ensureMediaPostContentType(new Headers({ "content-type": "application/json" })).get("content-type")).toBe("application/json");
     expect(ensureDrmLicenseContentType({})).toEqual({ "content-type": "application/octet-stream" });
     expect(ensureDrmLicenseContentType({ "Content-Type": "application/json" })).toEqual({ "Content-Type": "application/json" });
+    expect(ensureDrmLicenseContentType({})).not.toHaveProperty("Accept");
   });
   it("gives an actionable error for Widevine initialization failure", () => {
     expect(playbackMessage({ code: 6001 }, undefined, "widevine")).toContain("initialize Widevine");
