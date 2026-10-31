@@ -41,9 +41,14 @@ const ArtLecturePlayer = forwardRef<LecturePlayerHandle, Props>(function ArtLect
       let responseSample = "";
       try {
         const response = await fetch(props.src, { headers: { range: "bytes=0-2047" } });
+        if (!response.ok) throw new Error(`Media request failed (${response.status})`);
         responseType = response.headers.get("content-type") ?? "";
         responseSample = await response.text();
-      } catch {}
+        if (/text\/html/i.test(responseType)) throw new Error("The lecture resolver did not return playable media");
+      } catch (error) {
+        props.onError?.(error instanceof Error ? error.message : "The lecture source could not be loaded");
+        return;
+      }
       const lowerUrl = props.src.toLowerCase();
       const looksLikeHls = /mpegurl/i.test(responseType) || /#extm3u/i.test(responseSample);
       const looksLikeDash = /dash\+xml/i.test(responseType) || /<mpd[\s>]/i.test(responseSample);
@@ -57,6 +62,9 @@ const ArtLecturePlayer = forwardRef<LecturePlayerHandle, Props>(function ArtLect
           const { default: Hls } = await import("hls.js");
           if (!Hls.isSupported()) return;
           const hls = new Hls({ enableWorker: true });
+          hls.on("hlsError", (_event: string, data: any) => {
+            if (data?.fatal) props.onError?.(`HLS playback error (${data.details ?? "unknown"})`);
+          });
           hlsRef.current = hls;
           hls.loadSource(url);
           hls.attachMedia(video);
@@ -148,7 +156,12 @@ const ArtLecturePlayer = forwardRef<LecturePlayerHandle, Props>(function ArtLect
       player.on("video:durationchange", () => props.onDurationChange?.(player.duration));
       player.on("video:waiting", () => player.notice.show = "Buffering…");
       player.on("video:playing", () => player.notice.show = "");
-      player.on("video:error", () => props.onError?.("The lecture could not be played. Retry to refresh the source."));
+      player.on("video:error", () => {
+        const videoError = player.video.error;
+        props.onError?.(videoError?.code
+          ? `The video could not be decoded (media error ${videoError.code}). Retry to refresh the lecture link.`
+          : "The lecture could not be played. Retry to refresh the source.");
+      });
 
       player.on("video:keydown", (event: KeyboardEvent) => {
         if (event.key === "ArrowLeft") player.currentTime = Math.max(0, player.currentTime - 10);
