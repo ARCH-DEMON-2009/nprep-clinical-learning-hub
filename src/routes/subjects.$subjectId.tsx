@@ -48,6 +48,7 @@ function Courses() {
       <div className="mt-2"><PageTitle title="Courses" sub={courses.length ? `${courses.length} courses in this subject` : undefined} /></div>
       {q.isLoading && <Loading />}
       {q.error && <ErrorBox error={q.error} />}
+      {!q.isLoading && !q.error && courses.length === 0 && <p className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">No courses available for this subject.</p>}
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
         <div className="space-y-2">
           {courses.map((c, i) => {
@@ -84,7 +85,12 @@ function Sections({ courseId, course }: { courseId: string; course?: any }) {
     const term = search.trim().toLowerCase();
     return sections
       .map((s: any) => {
-        const videos: any[] = Array.isArray(s?.videos) ? s.videos : findArrays(s)[0]?.items ?? [];
+        const knownVideos = Object.entries(s ?? {}).flatMap(([key, value]) =>
+          /videos?|lectures?|contents?|items/i.test(key) && Array.isArray(value)
+            ? value.filter((item) => item && typeof item === "object")
+            : []);
+        const nestedVideos = findArrays(s).flatMap((collection) => collection.items);
+        const videos: any[] = knownVideos.length ? knownVideos : nestedVideos;
         const kept = videos.filter((v) => {
           if (term && !String(titleOf(v)).toLowerCase().includes(term)) return false;
           if (filter === "free" && !v?.is_free) return false;

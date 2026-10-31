@@ -28,6 +28,7 @@ function Subjects() {
       <PageTitle title="Subjects" sub={items.length ? `${items.length} subjects` : undefined} />
       {q.isLoading && <Loading />}
       {q.error && <ErrorBox error={q.error} />}
+      {!q.isLoading && !q.error && items.length === 0 && <p className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">No subjects available.</p>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {items.map((s, i) => (
           <ItemCard key={i} item={s} onClick={() => { const id = idOf(s); if (id) nav({ to: "/subjects/$subjectId", params: { subjectId: id } }); }} />

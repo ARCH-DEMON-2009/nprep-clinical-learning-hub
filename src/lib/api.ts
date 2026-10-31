@@ -77,7 +77,48 @@ export function findArrays(obj: any, depth = 0, name = "items"): { name: string;
   return Object.entries(obj).flatMap(([k, v]) => findArrays(v, depth + 1, k));
 }
 
-export const firstArray = (x: any): any[] => pickList(unwrap(x));
+export function contentArrays(x: any, depth = 0): { key: string; items: any[] }[] {
+  const root = depth === 0 ? unwrap(x) : x;
+  if (!root || typeof root !== "object" || depth > 8) return [];
+  if (Array.isArray(root)) {
+    const objects = root.filter((item) => item && typeof item === "object");
+    return objects.length ? [{ key: "items", items: objects }, ...objects.flatMap((item) => contentArrays(item, depth + 1))] : [];
+  }
+  return Object.entries(root).flatMap(([key, value]) => {
+    const nested = contentArrays(value, depth + 1);
+    if (Array.isArray(value)) {
+      const objects = value.filter((item) => item && typeof item === "object");
+      return objects.length ? [{ key, items: objects }, ...nested] : nested;
+    }
+    return nested;
+  });
+}
+
+export function firstArray(x: any): any[] {
+  const collections = contentArrays(x);
+  if (!collections.length) return [];
+  const score = ({ key, items }: { key: string; items: any[] }) => {
+    const keyScore = /(courses?|subjects?|sections?|lectures?|videos?|contents?|modules?)/i.test(key) ? 100 : 0;
+    const titleScore = items.filter((item) => Object.keys(item).some((name) => /(title|name)$/i.test(name))).length;
+    const idScore = items.filter((item) => idOf(item)).length;
+    return keyScore + titleScore * 4 + idScore * 2 + Math.min(items.length, 30);
+  };
+  const ranked = collections.filter(({ items }) => items.some((item) => Object.keys(item).length)).sort((a, b) => score(b) - score(a));
+  const top = ranked[0];
+  if (!top) return [];
+  if (/courses?|subjects?|sections?|lectures?|videos?|contents?|modules?/i.test(top.key)) {
+    const ids = new Map<string, any>();
+    for (const collection of ranked) {
+      if (collection.key !== top.key && !/(courses?|subjects?|sections?|lectures?|videos?|contents?|modules?)/i.test(collection.key)) continue;
+      for (const item of collection.items) {
+        const id = idOf(item);
+        if (id) ids.set(id, item);
+      }
+    }
+    if (ids.size > 0) return [...ids.values()];
+  }
+  return top.items.filter((item, index, items) => items.findIndex((candidate) => idOf(candidate) === idOf(item) || candidate === item) === index);
+}
 
 export const titleOf = (o: any): string =>
   o?.title ?? o?.name ?? o?.subject_name ?? o?.course_name ?? o?.section_name ?? o?.video_title ??
