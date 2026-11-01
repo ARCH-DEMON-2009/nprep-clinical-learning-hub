@@ -4,7 +4,8 @@ export type Question = { id: string; text: string; options: { id: string; text: 
 
 export function findEntity(response: any, id: string, depth = 0): any {
   if (!response || typeof response !== "object" || depth > 8) return undefined;
-  if (!Array.isArray(response) && idOf(response) === id) return response;
+  const directId = response.id ?? response._id ?? response.subjectId ?? response.subject_id ?? response.test_id ?? response.question_id ?? response.module_id;
+  if (!Array.isArray(response) && directId != null && String(directId) === id) return response;
   for (const child of Object.values(response)) {
     const found = findEntity(child, id, depth + 1);
     if (found) return found;

@@ -1,9 +1,10 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ErrorBox, Loading, PageTitle } from "@/components/AppShell";
-import { ItemCard } from "@/components/ItemCard";
-import { api, contentArrays, firstArray, idOf, titleOf } from "@/lib/api";
-import { RawData } from "@/components/AppShell";
+import { ErrorBox, Loading, PageTitle, useMe } from "@/components/AppShell";
+import { CatalogBrowser } from "@/components/CatalogBrowser";
+import { Button } from "@/components/ui/button";
+import { catalogEntities, uniqueEntities } from "@/lib/catalog";
+import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/subjects/")({
   head: () => ({
@@ -20,46 +21,16 @@ export const Route = createFileRoute("/subjects/")({
 });
 
 function Subjects() {
-  const nav = useNavigate();
-  const q = useQuery({
-    queryKey: ["subjects-and-batches"],
-    queryFn: async () => Promise.allSettled([
-      api("/video/subjects"),
-      api("/video/batches"),
-      api("/video/courses"),
-    ]),
-  });
-  const fulfilled = (q.data ?? []).flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
-  const subjects = firstArray(fulfilled[0]);
-  const batches = fulfilled.flatMap((payload, payloadIndex) => contentArrays(payload)
-    .filter(({ key, items }) => (payloadIndex === 1 && /batch|rapid/i.test(key))
-      || (payloadIndex === 2 && /course/i.test(key))
-      || items.some((item) => item?.batch_id != null || item?.batchId != null || /rapid revision/i.test(titleOf(item))))
-    .flatMap(({ items }) => items));
-  const seen = new Set<string>();
-  const subjectsOnly = subjects.filter((item) => item && !batches.some((batch) => idOf(batch) === idOf(item)));
-  const batchItems = batches.filter((item) => item && (item.batch_id != null || item.batchId != null || /batch|rapid/i.test(Object.keys(item).join(" "))));
-  const courseItems = [...batches, ...fulfilled.flatMap((payload) => contentArrays(payload)
-    .filter(({ key }) => /course/i.test(key))
-    .flatMap(({ items }) => items))].filter((item) => item && !batchItems.includes(item) && /course/i.test(Object.keys(item).join(" ")));
-  const items = [...subjectsOnly, ...batchItems, ...courseItems].filter((item) => {
-    const id = idOf(item) ?? `${titleOf(item)}-${item?.type ?? ""}`;
-    if (!id || seen.has(id)) return false;
-    seen.add(id);
-    return true;
-  });
-  return (
-    <div>
-      <PageTitle title="Subjects" sub={items.length ? `${items.length} subjects` : undefined} />
-      {q.isLoading && <Loading />}
-      {q.error && <ErrorBox error={q.error} />}
-      {!q.isLoading && !q.error && items.length === 0 && <p className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">No subjects available.</p>}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {items.map((s, i) => (
-          <ItemCard key={i} item={s} onClick={() => { const id = idOf(s); if (id) nav({ to: "/subjects/$subjectId", params: { subjectId: id } }); }} />
-        ))}
-      </div>
-      {!q.isLoading && items.length < 3 && <RawData data={q.data} />}
-    </div>
-  );
+  const q = useQuery({ queryKey: ["subjects"], queryFn: () => api("/video/subjects") });
+  const home = useQuery({ queryKey: ["home"], queryFn: () => api("/home") });
+  const me = useMe();
+  const subjects = catalogEntities(q.data, "subject", true);
+  const batches = uniqueEntities([...catalogEntities(home.data, "batch"), ...catalogEntities(me.data, "batch"), ...catalogEntities(q.data, "batch")]);
+  return <div>
+    <PageTitle title="Courses & Lectures" sub={subjects.length ? `${subjects.length} subjects` : undefined} />
+    {q.isLoading && <Loading />}
+    {q.error && <><ErrorBox error={q.error} /><Button variant="outline" onClick={() => q.refetch()}>Try again</Button></>}
+    {!q.isLoading && !q.error && !subjects.length && !batches.length && <p className="text-muted-foreground">No subjects available.</p>}
+    <CatalogBrowser batches={batches} subjects={subjects} />
+  </div>;
 }

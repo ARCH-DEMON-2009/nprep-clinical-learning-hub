@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
-import { api, idOf, titleOf } from "@/lib/api";
+import { api, idOf, titleOf, questionCount } from "@/lib/api";
 import { assessmentChildren, assessmentDiagnostics, assessmentQuestionCount, assessmentQuestionSource, assessmentShareLink, questionList, questionPath, type Question } from "@/lib/assessment";
 import { ErrorBox, Loading } from "./AppShell";
 import { Button } from "./ui/button";
@@ -31,8 +31,8 @@ function AssessmentContent({ item, kind }: { item: any; kind: "test" | "qbank" }
     },
     retry: 1,
   });
-  const questions = questionList(q.data ?? current);
   const children = assessmentChildren(q.data ?? current);
+  const questions = children.length ? [] : questionList(q.data ?? current);
   const shareLink = assessmentShareLink(q.data) ?? assessmentShareLink(current);
   const reportedQuestionCount = assessmentQuestionCount(q.data) ?? assessmentQuestionCount(current);
   return <div className="space-y-4">
@@ -45,7 +45,7 @@ function AssessmentContent({ item, kind }: { item: any; kind: "test" | "qbank" }
       : children.length ? <div className="grid gap-2">
         {children.map((child, i) => <Button key={idOf(child) ?? i} variant="outline" className="h-auto justify-between whitespace-normal py-3 text-left" onClick={() => {
           setTrail([...trail, selected]); setSelected(child);
-        }}>{titleOf(child)}<ArrowRight /></Button>)}
+        }}><span className="min-w-0"><span className="block break-words">{titleOf(child)}</span>{questionCount(child) != null && <span className="mt-1 block text-xs text-muted-foreground">{questionCount(child)} MCQs{child.completed_count != null ? ` · ${child.completed_count} completed` : ""}</span>}</span><ArrowRight className="shrink-0" /></Button>)}
       </div> : <div role="status" className="space-y-3 border-t border-border pt-4">
         <p className="text-sm text-muted-foreground">{reportedQuestionCount != null
           ? `NPrep reports ${reportedQuestionCount} questions but returned no question data or question endpoint for this ${kind === "test" ? "test" : "subject"}.`

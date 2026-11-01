@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { drmKeySystem, ensureDrmLicenseContentType, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "./lecture";
+import { drmKeySystem, ensureDrmLicenseContentType, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "./lecture";
 import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, embeddedMediaRedirect, encodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, isNprepLinkResolverUrl, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, mediaProxyUrl, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "./media-proxy";
 
 describe("lecture response normalization", () => {
@@ -35,12 +35,23 @@ describe("lecture response normalization", () => {
     expect(nprepSiteOrigin("http://localhost:8080/api/media/relay/x")).toBe("https://beta.nprep.site");
     expect(nprepSiteOrigin("http://localhost:8080", "https://app.nprep.in")).toBe("https://app.nprep.in");
   });
-  it("sets the binary content type for DRM POSTs without overriding explicit types", () => {
+  it("forces the Widevine challenge content type while preserving other headers", () => {
     expect(ensureMediaPostContentType(new Headers()).get("content-type")).toBe("application/octet-stream");
     expect(ensureMediaPostContentType(new Headers({ "content-type": "application/json" })).get("content-type")).toBe("application/json");
-    expect(ensureDrmLicenseContentType({})).toEqual({ "content-type": "application/octet-stream" });
-    expect(ensureDrmLicenseContentType({ "Content-Type": "application/json" })).toEqual({ "Content-Type": "application/json" });
+    expect(ensureDrmLicenseContentType({})).toEqual({ "Content-Type": "application/octet-stream" });
+    expect(ensureDrmLicenseContentType({ "content-type": "application/json", Authorization: "Bearer test" })).toEqual({ "Content-Type": "application/octet-stream", Authorization: "Bearer test" });
     expect(ensureDrmLicenseContentType({})).not.toHaveProperty("Accept");
+  });
+  it("registers a LICENSE-only request filter before playback", () => {
+    let filter: ((type: number, request: { headers: Record<string, string> }) => void) | undefined;
+    registerLicenseRequestFilter({ registerRequestFilter: (fn) => { filter = fn; } }, 2);
+    const license = { headers: { "Content-Type": "application/json" } };
+    const manifest = { headers: { "Content-Type": "application/dash+xml" } };
+    if (!filter) throw new Error("Request filter was not registered");
+    filter(2, license);
+    filter(0, manifest);
+    expect(license.headers["Content-Type"]).toBe("application/octet-stream");
+    expect(manifest.headers["Content-Type"]).toBe("application/dash+xml");
   });
   it("gives an actionable error for Widevine initialization failure", () => {
     expect(playbackMessage({ code: 6001 }, undefined, "widevine")).toContain("initialize Widevine");

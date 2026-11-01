@@ -4,7 +4,7 @@ import { CheckCircle2, Download, ExternalLink, FileText, Maximize, RotateCcw, Ro
 import { useEffect, useRef, useState } from "react";
 import { ErrorBox, Loading } from "@/components/AppShell";
 import { api, findArrays, findKey, getToken, imageOf, titleOf } from "@/lib/api";
-import { drmKeySystem, ensureDrmLicenseContentType, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "@/lib/lecture";
+import { drmKeySystem, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "@/lib/lecture";
 import { isNprepLinkResolverUrl, mediaProxyUrl, normalizeCloudFrontSignedUrl } from "@/lib/media-proxy";
 
 /** CloudFront only reads Policy/Signature/Key-Pair-Id in the query string. */
@@ -109,11 +109,7 @@ function Lecture() {
         shakaPlayer = new shaka.Player();
         playerRef.current = shakaPlayer;
         await shakaPlayer.attach(el);
-        shakaPlayer.getNetworkingEngine()?.registerRequestFilter((type: number, request: any) => {
-          if (type === shaka.net.NetworkingEngine.RequestType.LICENSE) {
-            request.headers = ensureDrmLicenseContentType(request.headers ?? {});
-          }
-        });
+        registerLicenseRequestFilter(shakaPlayer.getNetworkingEngine(), shaka.net.NetworkingEngine.RequestType.LICENSE);
         shakaPlayer.addEventListener("error", (event: any) => {
           if (cancelled) return;
           const error = event.detail;
@@ -200,7 +196,7 @@ function Lecture() {
       <div className="min-w-0 space-y-5">
         <div className="overflow-hidden rounded-xl bg-foreground">
           <div className={text && !src && !embed ? "p-6 text-background" : "aspect-video"}>
-            {src ? <video ref={videoRef} controls playsInline poster={imageOf(v)} className="h-full w-full bg-black" />
+            {src ? <video ref={videoRef} controls playsInline poster={imageOf(v)} className="h-full w-full bg-foreground" />
               : embed ? <iframe src={embed} className="h-full w-full" allow="autoplay; fullscreen" allowFullScreen title="Lecture" />
               : text ? <article className="space-y-3 break-words" dangerouslySetInnerHTML={{ __html: safeText }} />
               : <div className="flex h-full items-center justify-center text-background">Video not available</div>}

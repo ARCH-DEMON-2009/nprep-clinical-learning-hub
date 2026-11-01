@@ -55,9 +55,14 @@ export function drmKeySystem(drmType?: string): string {
 }
 
 export function ensureDrmLicenseContentType(headers: Record<string, string>): Record<string, string> {
-  const contentType = Object.entries(headers).find(([name]) => name.toLowerCase() === "content-type")?.[1]?.trim();
-  if (contentType) return headers;
-  return { ...headers, "content-type": "application/octet-stream" };
+  const clean = Object.fromEntries(Object.entries(headers).filter(([name]) => name.toLowerCase() !== "content-type"));
+  return { ...clean, "Content-Type": "application/octet-stream" };
+}
+
+export function registerLicenseRequestFilter(engine: { registerRequestFilter: (filter: (type: number, request: { headers: Record<string, string> }) => void) => void } | null, licenseType: number) {
+  engine?.registerRequestFilter((type, request) => {
+    if (type === licenseType) request.headers = ensureDrmLicenseContentType(request.headers ?? {});
+  });
 }
 
 export function lectureMediaDiagnostics(response: unknown, mediaUrl?: string, licenseUrl?: string, drmType?: string): string {

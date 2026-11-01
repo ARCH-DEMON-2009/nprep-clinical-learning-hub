@@ -119,9 +119,10 @@ async function forward({ request, params }: { request: Request; params: { _splat
     let location = upstream.headers.get("location");
     if (!location && isNprepSiteHost(target.hostname) && /^text\/html/i.test(upstream.headers.get("content-type") ?? "")) {
       const html = await upstream.clone().text();
-      location = embeddedMediaRedirect(html);
+      location = embeddedMediaRedirect(html) ?? null;
     }
     if (![301, 302, 303, 307, 308].includes(upstream.status) && !location) break;
+    if (!location) return new Response("Media redirect has no destination", { status: 502 });
     await upstream.body?.cancel();
     if (redirects === 5) return new Response("Too many media redirects", { status: 502 });
     const previousOrigin = target.origin;

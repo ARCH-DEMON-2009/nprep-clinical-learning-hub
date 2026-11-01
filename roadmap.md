@@ -1,4 +1,7 @@
 # NPrep playback and question taking
+- [x] Force Widevine LICENSE requests to application/octet-stream, replacing conflicting headers; request-filter regression test passes.
+- [x] Organize supplied Home batches, recent lectures and daily stats; preserve catalog levels and fix nested sections and section-name search.
+- [x] Update QBank module browsing and Tests categories with existing NPrep styling and reduced-motion-aware animations; controlled browser flows and all 61 tests pass.
 - [x] Fix lecture source detection, DRM setup, and retryable playback errors; verified Shaka with an unprotected DASH fixture.
 - [x] Make QBank and test cards open; browse supplied exams and consume embedded questions or NPrep-supplied question URLs.
 - [x] Provide answering, review flags, navigation, and local attempt summaries without claiming synchronization.
