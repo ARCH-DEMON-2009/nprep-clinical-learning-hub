@@ -12,7 +12,7 @@ describe("NPrep hierarchy", () => {
   it("loads sibling and nested playable sections without rendering faculty as lectures", () => {
     const data = { data: { sections: [{ id: 2, name: "Part one", sections: [{ id: 3, name: "Basics", videos: [lecture], faculty: [{ id: 9, name: "Teacher" }] }] }, { id: 4, name: "Part two", videos: [{ id: 32, name: "SK text", sk_text: "Notes" }] }] } };
     expect(sectionGroups(data).map((x) => x.id)).toEqual([3, 4]);
-    expect(lectureRows(data.data.sections[0].sections[0])).toEqual([lecture]);
+    expect(lectureRows({ videos: [lecture], faculty: [{ id: 9, name: "Teacher" }] })).toEqual([lecture]);
   });
   it("keeps lectures visible when their section name matches the search", () => {
     expect(filterSectionLectures({ name: "Clinical nursing", videos: [lecture] }, "clinical", "all").videos).toEqual([lecture]);

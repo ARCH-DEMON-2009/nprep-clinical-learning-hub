@@ -42,7 +42,13 @@ export function lectureRows(section: any): any[] {
 
 export function sectionGroups(value: any): any[] {
   const root = unwrap(value);
-  const named = contentArrays(root).filter(({ key }) => /^(?:all_)?sections$/i.test(key)).flatMap(({ items }) => items);
+  const walk = (node: any, depth = 0): any[] => {
+    if (!node || typeof node !== "object" || depth > 8) return [];
+    if (Array.isArray(node)) return node.flatMap((child) => walk(child, depth + 1));
+    return Object.entries(node).flatMap(([key, child]) => /^(?:all_)?sections$/i.test(key) && Array.isArray(child)
+      ? child.flatMap((section) => [section, ...walk(section, depth + 1)]) : walk(child, depth + 1));
+  };
+  const named = walk(root);
   const sections = uniqueEntities(named.length ? named : Array.isArray(root) ? root : []);
   const playable = sections.filter((section) => lectureRows(section).length > 0);
   if (playable.length) return playable;

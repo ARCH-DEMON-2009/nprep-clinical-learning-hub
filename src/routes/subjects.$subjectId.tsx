@@ -8,7 +8,7 @@ import { catalogEntities, sectionGroups, filterSectionLectures, lectureCompleted
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/subjects/$subjectId")({
-  validateSearch: (search: Record<string, unknown>): { kind: "subject" | "course" } => ({ kind: search.kind === "course" ? "course" : "subject" }),
+  validateSearch: (search: Record<string, unknown>): { kind: "subject" | "course" } => ({ kind: search["kind"] === "course" ? "course" : "subject" }),
   head: () => ({
     meta: [
       { property: "og:type", content: "website" },
