@@ -1,4 +1,7 @@
 # NPrep playback and question taking
+- [ ] Force Widevine license requests to use the binary challenge content type and test the request filter.
+- [ ] Organize Home batches, recent lectures and supplied daily stats; repair nested course/section browsing.
+- [ ] Update QBank modules and Tests categories with NPrep styling; verify available website flows.
 - [x] Fix lecture source detection, DRM setup, and retryable playback errors; verified Shaka with an unprotected DASH fixture.
 - [x] Make QBank and test cards open; browse supplied exams and consume embedded questions or NPrep-supplied question URLs.
 - [x] Provide answering, review flags, navigation, and local attempt summaries without claiming synchronization.

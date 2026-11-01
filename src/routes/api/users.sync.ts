@@ -4,8 +4,8 @@ import { createClient } from "@supabase/supabase-js";
 async function syncUser({ request }: { request: Request }) {
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
 
-  const url = process.env.SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_KEY ?? process.env.SUPABASE_SERVCE_KEY;
+  const url = process.env["SUPABASE_URL"];
+  const serviceKey = process.env["SUPABASE_SERVICE_KEY"] ?? process.env["SUPABASE_SERVCE_KEY"];
   if (!url || !serviceKey) {
     return new Response("User storage is not configured", { status: 503 });
   }
