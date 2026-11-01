@@ -31,8 +31,8 @@ function AssessmentContent({ item, kind }: { item: any; kind: "test" | "qbank" }
     },
     retry: 1,
   });
-  const questions = questionList(q.data ?? current);
   const children = assessmentChildren(q.data ?? current);
+  const questions = children.length ? [] : questionList(q.data ?? current);
   const shareLink = assessmentShareLink(q.data) ?? assessmentShareLink(current);
   const reportedQuestionCount = assessmentQuestionCount(q.data) ?? assessmentQuestionCount(current);
   return <div className="space-y-4">
