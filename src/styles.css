@@ -239,3 +239,17 @@
     transition: none;
   }
 }
+
+.catalog-tile {
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+.catalog-tile:hover { transform: translateY(-2px); border-color: var(--primary); }
+main > div { animation: nprep-enter 220ms ease-out; }
+@keyframes nprep-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) {
+  main > div { animation: none; }
+  .catalog-tile { transition: none; }
+  .catalog-tile:hover { transform: none; }
+}
