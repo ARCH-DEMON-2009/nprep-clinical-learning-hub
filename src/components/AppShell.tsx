@@ -4,10 +4,11 @@ import { BookOpen, ClipboardList, LayoutDashboard, Library, LogOut, Menu, Moon, 
 import { useEffect, useState, type ReactNode } from "react";
 import { api, clearToken, findKey, getToken, syncSupabaseUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { Button } from "./ui/button";
 
 const NAV = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/subjects", label: "Subjects & Lectures", icon: BookOpen },
+  { to: "/", label: "Home & Batches", icon: LayoutDashboard },
+  { to: "/subjects", label: "Courses & Lectures", icon: BookOpen },
   { to: "/tests", label: "Tests & PYQ", icon: ClipboardList },
   { to: "/qbank", label: "QBank", icon: Library },
   { to: "/profile", label: "Profile", icon: User },
@@ -65,9 +66,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex h-16 items-center justify-between px-4">
           <Link to="/" className="flex min-w-0 items-center gap-2.5">
             <img src="/nprep-logo.jpg" alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" />
-            <span className="font-display text-xl font-bold tracking-tight">NPrep</span>
+            <span className="font-display text-xl font-bold">NPrep</span>
           </Link>
-          <button className="md:hidden" onClick={() => setOpen(false)} aria-label="Close menu"><X className="h-5 w-5" /></button>
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(false)} aria-label="Close menu"><X className="h-5 w-5" /></Button>
         </div>
         <nav className="flex-1 space-y-1 px-3">
           {NAV.map((n) => (
@@ -80,20 +81,20 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="border-t border-sidebar-border p-3">
           <div className="truncate px-3 pb-2 text-sm text-muted-foreground">{name ?? "Student"}</div>
-          <button onClick={() => { clearToken(); window.location.href = "/login"; }}
+          <Button variant="ghost" onClick={() => { clearToken(); window.location.href = "/login"; }}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-accent">
             <LogOut className="h-4 w-4" /> Sign out
-          </button>
+          </Button>
         </div>
       </aside>
       {open && <div className="fixed inset-0 z-30 bg-foreground/30 md:hidden" onClick={() => setOpen(false)} />}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-background/85 px-4 backdrop-blur md:px-8">
-          <button className="md:hidden" onClick={() => setOpen(true)} aria-label="Open menu"><Menu className="h-5 w-5" /></button>
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setOpen(true)} aria-label="Open menu"><Menu className="h-5 w-5" /></Button>
           <div className="hidden text-sm text-muted-foreground md:block">{NAV.find((n) => isActive(n.to))?.label}</div>
-          <button onClick={toggleTheme} aria-label="Toggle theme" className="rounded-full border border-border p-2 hover:bg-accent">
+          <Button variant="outline" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className="rounded-full">
             {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
+          </Button>
         </header>
         <main className="flex-1 p-4 md:px-8 md:py-7 lg:px-10">{children}</main>
       </div>
@@ -104,7 +105,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 export function PageTitle({ title, sub }: { title: string; sub?: string | undefined }) {
   return (
     <div className="mb-7">
-      <h1 className="font-display text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{title}</h1>
+      <h1 className="font-display text-3xl font-bold leading-tight sm:text-4xl">{title}</h1>
       {sub && <p className="mt-2 text-sm text-muted-foreground sm:text-base">{sub}</p>}
     </div>
   );

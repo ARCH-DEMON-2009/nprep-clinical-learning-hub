@@ -6,11 +6,14 @@ import { Loading, PageTitle } from "@/components/AppShell";
 import { ItemCard } from "@/components/ItemCard";
 import { Assessment } from "@/components/Assessment";
 import { Button } from "@/components/ui/button";
-import { api, firstArray, questionCount, titleOf } from "@/lib/api";
+import { api, questionCount, titleOf } from "@/lib/api";
+import { catalogEntities } from "@/lib/catalog";
 
 export const Route = createFileRoute("/qbank")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "QBank — NPrep" },
       { name: "description", content: "Practice questions by subject." },
       { property: "og:title", content: "QBank — NPrep" },
@@ -22,7 +25,7 @@ export const Route = createFileRoute("/qbank")({
 
 function QBank() {
   const q = useQuery({ queryKey: ["qbank"], queryFn: () => api("/qbank/subjects"), retry: 1 });
-  const subjects = firstArray(q.data);
+  const subjects = catalogEntities(q.data, "subject", true);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<any>();
 
@@ -44,10 +47,10 @@ function QBank() {
       {q.error && (
         <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-center">
           <p className="text-sm text-destructive">{(q.error as Error)?.message ?? "Couldn't load the QBank."}</p>
-          <button onClick={() => q.refetch()}
+          <Button onClick={() => q.refetch()}
             className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
             <RefreshCw className="h-4 w-4" /> Try again
-          </button>
+          </Button>
         </div>
       )}
       {!q.isLoading && !q.error && subjects.length === 0 && (
@@ -75,7 +78,8 @@ function QBank() {
                   </div>
                 </div>
               )}
-              <Button className="mt-4 w-full" onClick={() => setSelected(s)}>Open practice</Button>
+              {Array.isArray(s.modules) && <p className="mt-2 text-xs text-muted-foreground">{s.modules.length} modules</p>}
+              <Button className="mt-4 w-full" onClick={(event) => { event.stopPropagation(); setSelected(s); }}>Open practice</Button>
             </ItemCard>
           );
         })}
