@@ -121,9 +121,9 @@ export function nprepSiteOrigin(requestUrl: string, originHeader?: string | null
   return "https://beta.nprep.site";
 }
 
-/** Only unauthenticated OTP sending requires NPrep's verified public origin. */
+/** Read-only comparisons confirm the v3 API rejects beta origins before routing/auth. */
 export function nprepApiOrigin(request: Request, path: string): string {
-  if (request.method === "POST" && path === "v3/auth/request-otp" && !request.headers.get("authorization")) {
+  if (path.startsWith("v3/")) {
     return "https://nprep.in";
   }
   return nprepSiteOrigin(request.url, request.headers.get("origin"), request.headers.get("referer"));

@@ -1,4 +1,5 @@
 # NPrep playback and question taking
+- [x] Confirm beta-origin rejection across login/content using GET only; set v3 API origin to nprep.in, preserve auth, and restrict media redirects to trusted hosts; 37 regression tests pass. Live OTP verification/playback remain unverified; no OTP/session initiated.
 - [x] Fix OTP Forbidden with the verified origin for unauthenticated OTP requests only; 35 static/unit regression tests pass without sending OTPs.
 - [ ] Add Gold or Rapid Revision 2.0 web subscriptions: blocked on whether the request means existing-plan display or purchasing, and validated NPrep checkout details if purchasing. Existing profile subscription display and Home batches are already present.
 - [x] Force Widevine LICENSE requests to application/octet-stream, replacing conflicting headers; request-filter regression test passes.
