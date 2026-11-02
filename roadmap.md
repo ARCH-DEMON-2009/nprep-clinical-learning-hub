@@ -1,4 +1,6 @@
 # NPrep playback and question taking
+- [ ] Fix OTP Forbidden with the verified origin for unauthenticated OTP requests only; validate without sending OTPs.
+- [ ] Add Gold or Rapid Revision 2.0 web subscriptions: clarify whether this means displaying an existing plan or purchasing one.
 - [x] Force Widevine LICENSE requests to application/octet-stream, replacing conflicting headers; request-filter regression test passes.
 - [x] Organize supplied Home batches, recent lectures and daily stats; preserve catalog levels and fix nested sections and section-name search.
 - [x] Update QBank module browsing and Tests categories with existing NPrep styling and reduced-motion-aware animations; controlled browser flows and all 61 tests pass.
