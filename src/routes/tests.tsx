@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Assessment } from "@/components/Assessment";
 import { Button } from "@/components/ui/button";
 import { Loading, PageTitle } from "@/components/AppShell";
-import { api, firstArray, imageOf, questionCount, titleOf, unwrap } from "@/lib/api";
+import { api, firstArray, idOf, imageOf, questionCount, titleOf, unwrap } from "@/lib/api";
+import { testListPath } from "@/lib/assessment";
 
 export const Route = createFileRoute("/tests")({
   head: () => ({
@@ -27,13 +28,45 @@ function Tests() {
   const sections: any[] = Array.isArray(root?.sections) ? root.sections : firstArray(q.data);
   const examCount = root?.selected_exam_count;
   const [selected, setSelected] = useState<any>();
+  const [selectedModule, setSelectedModule] = useState<any>();
   const [category, setCategory] = useState("all");
+  const modules: any[] = (() => {
+    const found: any[] = [];
+    const visit = (value: any, depth = 0) => {
+      if (!value || typeof value !== "object" || depth > 5) return;
+      if (Array.isArray(value)) { value.forEach((child) => visit(child, depth + 1)); return; }
+      for (const key of ["modules", "test_modules", "categories"]) {
+        if (Array.isArray(value[key])) found.push(...value[key]);
+      }
+      Object.values(value).forEach((child) => visit(child, depth + 1));
+    };
+    visit(q.data);
+    return found.filter((module, index) => found.findIndex((candidate) => idOf(candidate) === idOf(module)) === index);
+  })();
+  const moduleId = String(selectedModule?.id ?? selectedModule?.module_id ?? selectedModule?.moduleId ?? "");
+  const moduleType = String(selectedModule?.type ?? selectedModule?.test_type ?? "PYQ");
+  const moduleTestsQuery = useQuery({
+    queryKey: ["test-list", moduleType, moduleId],
+    queryFn: () => api(testListPath(moduleType, moduleId)),
+    enabled: Boolean(moduleId),
+    retry: 1,
+  });
 
   return (
     <div>
       <PageTitle title="Tests & PYQ"
         sub={examCount != null ? `${examCount} exams selected` : "Test series and previous year questions."} />
-      {sections.length > 0 && <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label="Test category">
+      {selectedModule && <div className="mb-6 flex items-center gap-3">
+        <Button variant="outline" onClick={() => setSelectedModule(undefined)}>All test modules</Button>
+        <span className="font-semibold">{titleOf(selectedModule)}</span>
+      </div>}
+      {!selectedModule && modules.length > 0 && <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {modules.map((module, index) => <Button key={idOf(module) ?? index} variant="outline" className="h-auto justify-between whitespace-normal p-4 text-left"
+          onClick={() => setSelectedModule({ ...module, type: module.type ?? module.test_type ?? moduleType })}>
+          <span>{titleOf(module)}{questionCount(module) != null && <span className="mt-1 block text-xs text-muted-foreground">{questionCount(module)} questions</span>}</span>
+        </Button>)}
+      </div>}
+      {sections.length > 0 && !selectedModule && modules.length === 0 && <div className="mb-6 flex flex-wrap gap-2" role="group" aria-label="Test category">
         <Button variant={category === "all" ? "default" : "outline"} aria-pressed={category === "all"} onClick={() => setCategory("all")}>All tests</Button>
         {sections.map((section, i) => <Button key={i} variant={category === String(i) ? "default" : "outline"} aria-pressed={category === String(i)} onClick={() => setCategory(String(i))}>{section.label ?? titleOf(section)}</Button>)}
       </div>}
@@ -52,7 +85,16 @@ function Tests() {
           No tests available yet.
         </div>
       )}
-      {sections.map((s, i) => {
+      {selectedModule && (moduleTestsQuery.isLoading ? <Loading /> : moduleTestsQuery.error ? <p className="text-sm text-destructive">Could not load this module's tests.</p> : (() => {
+        const moduleTests = firstArray(moduleTestsQuery.data);
+        return moduleTests.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {moduleTests.map((test, index) => <Button key={idOf(test) ?? index} variant="outline" className="h-auto justify-between whitespace-normal p-4 text-left"
+            onClick={() => setSelected({ ...test, type: moduleType, module_id: moduleId })}>
+            <span>{titleOf(test)}{questionCount(test) != null && <span className="mt-1 block text-xs text-muted-foreground">{questionCount(test)} questions</span>}</span>
+          </Button>)}
+        </div> : <p className="text-sm text-muted-foreground">No tests available in this module.</p>;
+      })())}
+      {!selectedModule && sections.map((s, i) => {
         if (category !== "all" && category !== String(i)) return null;
         const tests: any[] = Array.isArray(s?.all_tests) ? s.all_tests : [];
         const label = s?.label ?? titleOf(s);

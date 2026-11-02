@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
 import { api, idOf, titleOf, questionCount } from "@/lib/api";
-import { assessmentChildren, assessmentDiagnostics, assessmentQuestionCount, assessmentQuestionSource, assessmentShareLink, questionList, questionPath, type Question } from "@/lib/assessment";
+import { assessmentChildren, assessmentDiagnostics, assessmentQuestionCandidates, assessmentQuestionCount, assessmentQuestionSource, assessmentShareLink, questionList, questionPath, type Question } from "@/lib/assessment";
 import { ErrorBox, Loading } from "./AppShell";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -26,8 +26,27 @@ function AssessmentContent({ item, kind }: { item: any; kind: "test" | "qbank" }
     queryFn: async () => {
       if (path) return api(path);
       const catalog = await api(kind === "test" ? "/test" : "/qbank/subjects");
-      const source = assessmentQuestionSource(catalog, idOf(current) ?? "", current);
-      return source.path ? api(source.path) : source.entity;
+      const source = assessmentQuestionSource(catalog, idOf(current) ?? "", current, kind);
+      if (source.paths.length === 0) return source.entity;
+
+      const contextualPaths = kind === "test"
+        ? assessmentQuestionCandidates("test", idOf(current) ?? "", {
+            type: current.type ?? current.test_type ?? "PYQ",
+            moduleId: current.module_id ?? current.moduleId,
+          })
+        : source.paths;
+      let lastFetched: unknown;
+      for (const candidate of [...new Set([...contextualPaths, ...source.paths])]) {
+        try {
+          const fetched = await api(candidate);
+          lastFetched = fetched;
+          const hasQuestions = questionList(fetched).length > 0;
+          const reportedCount = assessmentQuestionCount(fetched);
+          if (hasQuestions || (reportedCount != null && reportedCount > 0)) return fetched;
+          if (!(fetched && typeof fetched === "object" && (fetched as any).success === true && Object.keys(fetched).length === 1)) return fetched;
+        } catch {}
+      }
+      return lastFetched ?? source.entity;
     },
     retry: 1,
   });
