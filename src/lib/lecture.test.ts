@@ -21,6 +21,11 @@ describe("lecture response normalization", () => {
     expect(embeddedMediaRedirect(`<meta http-equiv="refresh" content="0; url=https://cdn.example/video.mpd?a=1&amp;b=2">`)).toBe("https://cdn.example/video.mpd?a=1&b=2");
     expect(embeddedMediaRedirect(`window.location.href = "https://cdn.example/video.m3u8";`)).toBe("https://cdn.example/video.m3u8");
   });
+  it("recognizes signed CloudFront DRM manifests as relay candidates", () => {
+    const manifest = "https://dsj0ye61xl4q1.cloudfront.net/videos/lesson/drm/master.mpd?Policy=p&Signature=s&Key-Pair-Id=k&drm_type=widevine";
+    expect(mediaProxyUrl(manifest)).toContain("/api/media/relay/");
+    expect(isAllowedMediaHost(new URL(manifest).hostname)).toBe(true);
+  });
   it("allows NPrep link hosts and TPStreams license hosts", () => {
     expect(isAllowedMediaHost("links.nprep.in")).toBe(true);
     expect(isNprepLinkResolverUrl("https://links.nprep.in/lecture/118")).toBe(true);
