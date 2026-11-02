@@ -30,15 +30,16 @@ describe("NPrep question data", () => {
   it("fetches established test and qbank question routes", () => {
     expect(assessmentQuestionCandidates("test", "29")).toEqual([
       "/test/attempt?type=PYQ&test_id=29",
-      "/test/attempt/question?type=PYQ&test_id=29",
+      "/test/attempt/question",
       "/test/description?type=PYQ&test_id=29",
       "/test/29/questions",
       "/test/questions?testId=29",
     ]);
     expect(testListPath("PYQ", "24")).toBe("/test/list?type=PYQ&module_id=24");
     expect(assessmentQuestionCandidates("qbank", "5")).toEqual([
-      "/qbank/5/questions",
       "/qbank/questions?subjectId=5",
+      "/qbank/5/questions",
+      "/qbank/subject/5/questions",
     ]);
   });
   it("follows a supplied NPrep question URL", () => {

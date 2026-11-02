@@ -199,13 +199,17 @@ export function assessmentQuestionCandidates(kind: "test" | "qbank", id: string,
     const type = options?.type || "PYQ";
     return [
       `/test/attempt?type=${encodeURIComponent(type)}&test_id=${encodeURIComponent(id)}`,
-      `/test/attempt/question?type=${encodeURIComponent(type)}&test_id=${encodeURIComponent(id)}`,
+      `/test/attempt/question`,
       `/test/description?type=${encodeURIComponent(type)}&test_id=${encodeURIComponent(id)}`,
       `/test/${encodeURIComponent(id)}/questions`,
       `/test/questions?testId=${encodeURIComponent(id)}`,
     ];
   }
-  return [`/qbank/${encodeURIComponent(id)}/questions`, `/qbank/questions?subjectId=${encodeURIComponent(id)}`];
+  return [
+    `/qbank/questions?subjectId=${encodeURIComponent(id)}`,
+    `/qbank/${encodeURIComponent(id)}/questions`,
+    `/qbank/subject/${encodeURIComponent(id)}/questions`,
+  ];
 }
 
 export function testListPath(type: string, moduleId: string): string {
