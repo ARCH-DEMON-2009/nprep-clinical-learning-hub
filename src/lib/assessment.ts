@@ -193,11 +193,23 @@ export function assessmentQuestionSource(catalog: any, id: string, fallback: any
   return { entity, path, paths: [...new Set(paths)] };
 }
 
-export function assessmentQuestionCandidates(kind: "test" | "qbank", id: string): string[] {
+export function assessmentQuestionCandidates(kind: "test" | "qbank", id: string, options?: { type?: string; moduleId?: string }): string[] {
   if (!id) return [];
-  return kind === "test"
-    ? [`/test/${encodeURIComponent(id)}/questions`, `/test/questions?testId=${encodeURIComponent(id)}`]
-    : [`/qbank/${encodeURIComponent(id)}/questions`, `/qbank/questions?subjectId=${encodeURIComponent(id)}`];
+  if (kind === "test") {
+    const type = options?.type || "PYQ";
+    return [
+      `/test/attempt?type=${encodeURIComponent(type)}&test_id=${encodeURIComponent(id)}`,
+      `/test/attempt/question?type=${encodeURIComponent(type)}&test_id=${encodeURIComponent(id)}`,
+      `/test/description?type=${encodeURIComponent(type)}&test_id=${encodeURIComponent(id)}`,
+      `/test/${encodeURIComponent(id)}/questions`,
+      `/test/questions?testId=${encodeURIComponent(id)}`,
+    ];
+  }
+  return [`/qbank/${encodeURIComponent(id)}/questions`, `/qbank/questions?subjectId=${encodeURIComponent(id)}`];
+}
+
+export function testListPath(type: string, moduleId: string): string {
+  return `/test/list?type=${encodeURIComponent(type)}&module_id=${encodeURIComponent(moduleId)}`;
 }
 
 export function assessmentChildren(entity: any): any[] {

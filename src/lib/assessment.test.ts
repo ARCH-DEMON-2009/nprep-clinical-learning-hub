@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assessmentChildren, assessmentDiagnostics, assessmentQuestionCount, assessmentQuestionCandidates, assessmentQuestionSource, assessmentShareLink, findEntity, questionList, questionPath } from "./assessment";
+import { assessmentChildren, assessmentDiagnostics, assessmentQuestionCount, assessmentQuestionCandidates, assessmentQuestionSource, assessmentShareLink, findEntity, questionList, questionPath, testListPath } from "./assessment";
 
 describe("NPrep question data", () => {
   it("finds an exam inside a test series", () => {
@@ -28,10 +28,14 @@ describe("NPrep question data", () => {
     ]);
   });
   it("fetches established test and qbank question routes", () => {
-    expect(assessmentQuestionCandidates("test", "118")).toEqual([
-      "/test/118/questions",
-      "/test/questions?testId=118",
+    expect(assessmentQuestionCandidates("test", "29")).toEqual([
+      "/test/attempt?type=PYQ&test_id=29",
+      "/test/attempt/question?type=PYQ&test_id=29",
+      "/test/description?type=PYQ&test_id=29",
+      "/test/29/questions",
+      "/test/questions?testId=29",
     ]);
+    expect(testListPath("PYQ", "24")).toBe("/test/list?type=PYQ&module_id=24");
     expect(assessmentQuestionCandidates("qbank", "5")).toEqual([
       "/qbank/5/questions",
       "/qbank/questions?subjectId=5",
