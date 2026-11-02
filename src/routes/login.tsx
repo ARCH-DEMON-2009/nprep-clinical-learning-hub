@@ -54,56 +54,80 @@ function Login() {
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   }
 
-  const input = "w-full rounded-lg border border-input bg-background px-4 py-3 text-lg outline-none focus:ring-2 focus:ring-ring";
-  const btn = "w-full rounded-lg bg-primary py-3 font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50";
+  const input = "h-12 w-full rounded-md border border-[#d8dee8] bg-white px-4 text-base text-[#172a4d] outline-none transition placeholder:text-[#97a1b2] focus:border-[#4466ff] focus:ring-2 focus:ring-[#4466ff]/15";
+  const btn = "h-12 w-full rounded-md bg-[#131b63] font-semibold text-white shadow-[0_8px_24px_rgba(19,27,99,0.18)] transition hover:bg-[#202d7c] disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
-    <div className="grid min-h-screen md:grid-cols-2">
-      <div className="hidden flex-col justify-between bg-primary p-12 text-primary-foreground md:flex">
-        <div className="flex items-center gap-3 font-display text-3xl font-bold">
-          <img src="/nprep-logo.jpg" alt="" className="h-12 w-12 rounded-lg object-cover" />
-          <span>NPrep</span>
-        </div>
-        <div>
-          <h1 className="font-display text-5xl font-bold leading-tight">Prepare smarter for your nursing exams.</h1>
-          <p className="mt-4 text-lg opacity-80">Lectures, notes, PYQs and test series — all in one place.</p>
-        </div>
-        <div className="text-sm opacity-70">Medical & nursing preparation</div>
-      </div>
-      <div className="flex items-center justify-center p-6">
-        <div className="w-full max-w-sm space-y-6">
-          <div>
-            <h2 className="font-display text-3xl font-bold">{step === "phone" ? "Welcome back" : "Enter OTP"}</h2>
-            <p className="mt-1 text-muted-foreground">
-              {step === "phone" ? "Sign in with your mobile number" : `Sent to +91 ${phone}`}
-            </p>
-          </div>
-          {step === "phone" ? (
-            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (valid) requestOtp(); }}>
-              <div className="flex gap-2">
-                <span className="flex items-center rounded-lg border border-input bg-muted px-3 text-lg">+91</span>
-                <input className={input} inputMode="numeric" placeholder="10-digit mobile" value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} />
+    <main className="min-h-screen bg-[#f4f7fb] text-[#172a4d]">
+      <div className="mx-auto flex min-h-screen max-w-[1180px] items-center justify-center px-5 py-8 md:px-8">
+        <div className="grid w-full overflow-hidden rounded-lg bg-white shadow-[0_16px_50px_rgba(19,27,99,0.12)] md:min-h-[620px] md:grid-cols-[1.08fr_0.92fr]">
+          <section className="relative hidden overflow-hidden bg-[linear-gradient(145deg,#eef7ff_0%,#ffffff_58%,#fff5fb_100%)] md:flex md:flex-col md:justify-between md:p-12">
+            <div className="absolute inset-y-0 right-0 w-32 bg-[linear-gradient(180deg,rgba(68,102,255,.08),rgba(230,9,177,.06))]" />
+            <div className="relative flex items-center gap-3">
+              <img src="/nprep-logo.jpg" alt="NPrep" className="h-11 w-11 rounded-md object-cover" />
+              <span className="text-xl font-bold text-[#131b63]">NPrep</span>
+            </div>
+            <div className="relative max-w-md">
+              <div className="mb-7 h-1 w-14 rounded-full bg-[#4466ff]" />
+              <h1 className="text-4xl font-bold leading-[1.15] text-[#131b63] lg:text-5xl">Prepare smarter.<br />Practice better.</h1>
+              <p className="mt-5 max-w-sm text-base leading-7 text-[#64748b]">Your complete nursing preparation platform for lectures, QBank, PYQs, and test series.</p>
+              <div className="mt-9 grid grid-cols-3 gap-3">
+                {["Lectures", "QBank", "PYQs"].map((label) => (
+                  <div key={label} className="border-l border-[#dce3ef] pl-3 text-sm font-semibold text-[#344054]">{label}</div>
+                ))}
               </div>
-              {phone.length === 10 && !valid && <p className="text-sm text-destructive">Enter a valid Indian mobile number</p>}
-              <button className={btn} disabled={!valid || busy}>{busy ? "Sending…" : "Get OTP"}</button>
-            </form>
-          ) : (
-            <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (otp.length >= 4) verify(); }}>
-              <input className={input + " text-center tracking-[0.5em]"} inputMode="numeric" autoFocus placeholder="••••••"
-                value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} />
-              <button className={btn} disabled={otp.length < 4 || busy}>{busy ? "Verifying…" : "Verify & sign in"}</button>
-              <div className="flex justify-between text-sm">
-                <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => { setStep("phone"); setOtp(""); }}>Change number</button>
-                <button type="button" disabled={timer > 0 || busy} onClick={requestOtp} className="font-medium text-primary disabled:text-muted-foreground">
-                  {timer > 0 ? `Resend in ${timer}s` : "Resend OTP"}
-                </button>
+            </div>
+            <p className="relative text-xs font-medium text-[#7b8798]">India's Nursing Preparation Platform</p>
+          </section>
+
+          <section className="flex items-center justify-center px-6 py-10 sm:px-10 md:px-12">
+            <div className="w-full max-w-sm">
+              <div className="mb-9 text-center md:hidden">
+                <img src="/nprep-logo.jpg" alt="NPrep" className="mx-auto h-14 w-14 rounded-md object-cover" />
               </div>
-            </form>
-          )}
-          {err && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{err}</p>}
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#4466ff]">Student login</p>
+                <h2 className="text-3xl font-bold text-[#131b63]">{step === "phone" ? "Welcome back" : "Verify your number"}</h2>
+                <p className="mt-2 text-sm leading-6 text-[#6b7280]">
+                  {step === "phone" ? "Enter your mobile number to continue." : `Enter the OTP sent to +91 ${phone}`}
+                </p>
+              </div>
+
+              {step === "phone" ? (
+                <form className="mt-8 space-y-5" onSubmit={(e) => { e.preventDefault(); if (valid) requestOtp(); }}>
+                  <label className="block text-sm font-semibold text-[#344054]">
+                    Mobile number
+                    <div className="mt-2 flex gap-2">
+                      <span className="flex h-12 min-w-16 items-center justify-center rounded-md border border-[#d8dee8] bg-[#f8fafc] text-sm font-semibold text-[#344054]">+91</span>
+                      <input className={input} inputMode="numeric" autoComplete="tel" placeholder="10-digit mobile number" value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} />
+                    </div>
+                  </label>
+                  {phone.length === 10 && !valid && <p className="text-sm text-red-600">Enter a valid Indian mobile number</p>}
+                  <button className={btn} disabled={!valid || busy}>{busy ? "Sending OTP…" : "Continue"}</button>
+                </form>
+              ) : (
+                <form className="mt-8 space-y-5" onSubmit={(e) => { e.preventDefault(); if (otp.length >= 4) verify(); }}>
+                  <label className="block text-sm font-semibold text-[#344054]">
+                    One-time password
+                    <input className={input + " mt-2 text-center text-xl tracking-[0.55em]"} inputMode="numeric" autoComplete="one-time-code" autoFocus placeholder="••••••"
+                      value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} />
+                  </label>
+                  <button className={btn} disabled={otp.length < 4 || busy}>{busy ? "Verifying…" : "Verify & sign in"}</button>
+                  <div className="flex items-center justify-between text-sm">
+                    <button type="button" className="text-[#5f6b7a] hover:text-[#131b63]" onClick={() => { setStep("phone"); setOtp(""); }}>Change number</button>
+                    <button type="button" disabled={timer > 0 || busy} onClick={requestOtp} className="font-semibold text-[#4466ff] disabled:text-[#98a2b3]">
+                      {timer > 0 ? `Resend in ${timer}s` : "Resend OTP"}
+                    </button>
+                  </div>
+                </form>
+              )}
+              {err && <p className="mt-5 rounded-md border border-red-100 bg-red-50 px-3 py-3 text-sm text-red-700" role="alert">{err}</p>}
+              <p className="mt-9 text-center text-xs leading-5 text-[#98a2b3]">By continuing, you agree to NPrep's terms and privacy policy.</p>
+            </div>
+          </section>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
