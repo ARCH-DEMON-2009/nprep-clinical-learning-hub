@@ -42,8 +42,10 @@ function AssessmentContent({ item, kind }: { item: any; kind: "test" | "qbank" }
           lastFetched = fetched;
           const hasQuestions = questionList(fetched).length > 0;
           const reportedCount = assessmentQuestionCount(fetched);
+          const successOnly = fetched && typeof fetched === "object" && (fetched as any).success === true && Object.keys(fetched).length === 1;
+          const onlyZeroCount = reportedCount === 0;
           if (hasQuestions || (reportedCount != null && reportedCount > 0)) return fetched;
-          if (!(fetched && typeof fetched === "object" && (fetched as any).success === true && Object.keys(fetched).length === 1)) return fetched;
+          if (!successOnly && !onlyZeroCount && fetched != null) return fetched;
         } catch {}
       }
       return lastFetched ?? source.entity;
