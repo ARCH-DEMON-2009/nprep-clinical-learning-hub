@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assessmentChildren, assessmentDiagnostics, assessmentQuestionCount, assessmentQuestionSource, assessmentShareLink, findEntity, questionList, questionPath } from "./assessment";
+import { assessmentChildren, assessmentDiagnostics, assessmentQuestionCount, assessmentQuestionCandidates, assessmentQuestionSource, assessmentShareLink, findEntity, questionList, questionPath } from "./assessment";
 
 describe("NPrep question data", () => {
   it("finds an exam inside a test series", () => {
@@ -25,6 +25,16 @@ describe("NPrep question data", () => {
   it("parses a single embedded question object", () => {
     expect(questionList({ data: { question: { questionId: 2, questionText: "One?", options: ["Yes", "No"] } } })).toMatchObject([
       { id: "2", text: "One?", options: [{ text: "Yes" }, { text: "No" }] },
+    ]);
+  });
+  it("fetches established test and qbank question routes", () => {
+    expect(assessmentQuestionCandidates("test", "118")).toEqual([
+      "/test/118/questions",
+      "/test/questions?testId=118",
+    ]);
+    expect(assessmentQuestionCandidates("qbank", "5")).toEqual([
+      "/qbank/5/questions",
+      "/qbank/questions?subjectId=5",
     ]);
   });
   it("follows a supplied NPrep question URL", () => {

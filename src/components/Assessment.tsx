@@ -26,8 +26,15 @@ function AssessmentContent({ item, kind }: { item: any; kind: "test" | "qbank" }
     queryFn: async () => {
       if (path) return api(path);
       const catalog = await api(kind === "test" ? "/test" : "/qbank/subjects");
-      const source = assessmentQuestionSource(catalog, idOf(current) ?? "", current);
-      return source.path ? api(source.path) : source.entity;
+      const source = assessmentQuestionSource(catalog, idOf(current) ?? "", current, kind);
+      if (source.paths.length === 0) return source.entity;
+
+      for (const candidate of [...new Set(source.paths)]) {
+        try {
+          return await api(candidate);
+        } catch {}
+      }
+      return source.entity;
     },
     retry: 1,
   });

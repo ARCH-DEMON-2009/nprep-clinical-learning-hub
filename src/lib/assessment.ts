@@ -186,10 +186,18 @@ export function assessmentQuestionCount(response: unknown): number | undefined {
   return visit(response);
 }
 
-export function assessmentQuestionSource(catalog: any, id: string, fallback: any): { entity: any; path?: string } {
+export function assessmentQuestionSource(catalog: any, id: string, fallback: any, kind?: "test" | "qbank"): { entity: any; path?: string; paths: string[] } {
   const entity = findEntity(catalog, id) ?? fallback;
   const path = questionPath(entity);
-  return path ? { entity, path } : { entity };
+  const paths = [path, ...(kind ? assessmentQuestionCandidates(kind, id) : [])].filter((candidate): candidate is string => Boolean(candidate));
+  return { entity, path, paths: [...new Set(paths)] };
+}
+
+export function assessmentQuestionCandidates(kind: "test" | "qbank", id: string): string[] {
+  if (!id) return [];
+  return kind === "test"
+    ? [`/test/${encodeURIComponent(id)}/questions`, `/test/questions?testId=${encodeURIComponent(id)}`]
+    : [`/qbank/${encodeURIComponent(id)}/questions`, `/qbank/questions?subjectId=${encodeURIComponent(id)}`];
 }
 
 export function assessmentChildren(entity: any): any[] {
