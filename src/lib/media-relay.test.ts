@@ -25,16 +25,19 @@ describe("media relay credential boundaries (mocked network only)", () => {
   });
 
   it("rejects an untrusted redirect even when NPrep supplied it", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, {
-      status: 302, headers: { location: "https://untrusted.example/video.mpd" },
-    }));
+    const seen: Headers[] = [];
+    const fetchMock = vi.fn(async (_url: URL, init: RequestInit) => {
+      seen.push(new Headers(init.headers));
+      return new Response(null, {
+        status: 302, headers: { location: "https://untrusted.example/video.mpd" },
+      });
+    });
     vi.stubGlobal("fetch", fetchMock);
     const response = await route.server.handlers.GET(context("https://links.nprep.in/video"));
     expect(response.status).toBe(403);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const headers = fetchMock.mock.calls[0]?.[1]?.headers as Headers;
-    expect(headers.get("authorization")).toBe("Bearer fixture-only");
-    expect(headers.get("cookie")).not.toContain("unrelated");
+    expect(seen[0]?.get("authorization")).toBe("Bearer fixture-only");
+    expect(seen[0]?.get("cookie")).not.toContain("unrelated");
   });
 
   it("keeps signed CDN credentials but strips the user bearer on a trusted CDN redirect", async () => {
