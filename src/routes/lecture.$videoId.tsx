@@ -53,8 +53,11 @@ function Lecture() {
   const embed = mediaSrc && /youtube\.com|youtu\.be|vimeo\.com/i.test(mediaSrc) ? mediaSrc : undefined;
   // CloudFront does not send browser CORS headers for these signed DRM manifests.
   // Route them through the relay from the first request; native MP4 playback remains direct.
-  const isCloudFrontDrm = Boolean(license && mediaSrc && /cloudfront\.net/i.test(mediaSrc));
-  const [viaProxy, setViaProxy] = useState(() => isNprepLinkResolverUrl(mediaSrc ?? "") || isCloudFrontDrm);
+  const isCloudFrontMedia = Boolean(mediaSrc && /cloudfront\.net/i.test(mediaSrc));
+  const [viaProxy, setViaProxy] = useState(() => isNprepLinkResolverUrl(mediaSrc ?? "") || isCloudFrontMedia);
+  useEffect(() => {
+    if (isNprepLinkResolverUrl(mediaSrc ?? "") || isCloudFrontMedia) setViaProxy(true);
+  }, [mediaSrc, isCloudFrontMedia]);
   const src = embed || !mediaSrc ? undefined : viaProxy ? mediaProxyUrl(mediaSrc) : signedDirectUrl(mediaSrc);
 
   const stamps: any[] = Array.isArray(v?.stamps) ? v.stamps
