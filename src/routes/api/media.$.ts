@@ -24,7 +24,6 @@ async function forward({ request, params }: { request: Request; params: { _splat
   if (relay !== "relay" || !encoded) return new Response("Not found", { status: 404 });
 
   let target: URL;
-  let followedNprepRedirect = false;
   try {
     target = normalizeCloudFrontSignedUrl(new URL(decodeMediaTarget(encoded)));
     if (target.protocol === "http:" && isNprepSiteHost(target.hostname.toLowerCase())) {
@@ -79,7 +78,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
   let body = method === "POST" ? await request.arrayBuffer() : undefined;
   let upstream: Response | undefined;
   for (let redirects = 0; redirects <= 5; redirects += 1) {
-    if (!allowedTarget(target) && !(followedNprepRedirect && target.protocol === "https:")) {
+    if (!allowedTarget(target)) {
       return new Response("Media host is not allowed", { status: 403 });
     }
     try {
@@ -126,11 +125,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
     await upstream.body?.cancel();
     if (redirects === 5) return new Response("Too many media redirects", { status: 502 });
     const previousOrigin = target.origin;
-    const previousHostname = target.hostname;
     target = new URL(location, target);
-    if (isNprepSiteHost(previousHostname)) {
-      followedNprepRedirect = true;
-    }
     if (target.protocol === "http:") target.protocol = "https:";
     if (target.protocol !== "https:") return new Response("Media redirect must use HTTPS", { status: 502 });
     if (target.origin !== previousOrigin && !isNprepSiteHost(target.hostname.toLowerCase())) {
