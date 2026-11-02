@@ -51,9 +51,13 @@ function Lecture() {
   const v = lectureData(q.data);
   const { src: mediaSrc, license, drmType, notes, text } = lectureMedia(v);
   const embed = mediaSrc && /youtube\.com|youtu\.be|vimeo\.com/i.test(mediaSrc) ? mediaSrc : undefined;
-  // Play straight from the CDN first: NPrep's CloudFront is geo-restricted, so the
-  // viewer's own (Indian) connection works where an overseas server proxy gets 403.
-  const [viaProxy, setViaProxy] = useState(() => isNprepLinkResolverUrl(mediaSrc ?? ""));
+  // CloudFront does not send browser CORS headers for these signed DRM manifests.
+  // Route them through the relay from the first request; native MP4 playback remains direct.
+  const isCloudFrontMedia = Boolean(mediaSrc && /cloudfront\.net/i.test(mediaSrc));
+  const [viaProxy, setViaProxy] = useState(() => isNprepLinkResolverUrl(mediaSrc ?? "") || isCloudFrontMedia);
+  useEffect(() => {
+    if (isNprepLinkResolverUrl(mediaSrc ?? "") || isCloudFrontMedia) setViaProxy(true);
+  }, [mediaSrc, isCloudFrontMedia]);
   const src = embed || !mediaSrc ? undefined : viaProxy ? mediaProxyUrl(mediaSrc) : signedDirectUrl(mediaSrc);
 
   const stamps: any[] = Array.isArray(v?.stamps) ? v.stamps

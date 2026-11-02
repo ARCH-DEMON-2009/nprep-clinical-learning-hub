@@ -151,6 +151,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
   const responseHeaders = new Headers({
     "content-type": contentType,
     "access-control-allow-origin": "*",
+    "x-nprep-media-relay-region": process.env["VERCEL_REGION"] ?? "unknown",
   });
   for (const [name, value] of signedCookies) {
     const secure = new URL(request.url).protocol === "https:";

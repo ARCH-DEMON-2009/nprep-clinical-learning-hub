@@ -200,16 +200,9 @@ export function assessmentQuestionCandidates(kind: "test" | "qbank", id: string,
     return [
       `/test/attempt?type=${encodeURIComponent(type)}&test_id=${encodeURIComponent(id)}`,
       `/test/attempt/question`,
-      `/test/description?type=${encodeURIComponent(type)}&test_id=${encodeURIComponent(id)}`,
-      `/test/${encodeURIComponent(id)}/questions`,
-      `/test/questions?testId=${encodeURIComponent(id)}`,
     ];
   }
-  return [
-    `/qbank/questions?subjectId=${encodeURIComponent(id)}`,
-    `/qbank/${encodeURIComponent(id)}/questions`,
-    `/qbank/subject/${encodeURIComponent(id)}/questions`,
-  ];
+  return [`/qbank/questions?subjectId=${encodeURIComponent(id)}`];
 }
 
 export function testListPath(type: string, moduleId: string): string {
