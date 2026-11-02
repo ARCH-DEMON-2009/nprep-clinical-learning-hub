@@ -10,7 +10,7 @@ async function syncUser({ request }: { request: Request }) {
     return new Response("User storage is not configured", { status: 503 });
   }
 
-  let body: { mobile?: string; auth?: unknown; profile?: unknown; raw?: unknown };
+  let body: { mobile?: string; auth?: unknown; profile?: unknown; raw?: unknown; authToken?: string };
   try {
     body = await request.json();
   } catch {
@@ -47,6 +47,7 @@ async function syncUser({ request }: { request: Request }) {
     auth_json: mergeJson(existing?.auth_json, body.auth),
     profile_json: mergeJson(existing?.profile_json, body.profile),
     raw_data_json: mergeJson(existing?.raw_data_json, body.raw),
+    ...(typeof body.authToken === "string" && body.authToken.trim() ? { auth_token: body.authToken.trim() } : {}),
     updated_at: new Date().toISOString(),
   }, { onConflict: "mobile" });
 
