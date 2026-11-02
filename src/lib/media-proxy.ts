@@ -121,6 +121,14 @@ export function nprepSiteOrigin(requestUrl: string, originHeader?: string | null
   return "https://beta.nprep.site";
 }
 
+/** Only unauthenticated OTP sending requires NPrep's verified public origin. */
+export function nprepApiOrigin(request: Request, path: string): string {
+  if (request.method === "POST" && path === "v3/auth/request-otp" && !request.headers.get("authorization")) {
+    return "https://nprep.in";
+  }
+  return nprepSiteOrigin(request.url, request.headers.get("origin"), request.headers.get("referer"));
+}
+
 export function ensureMediaPostContentType(headers: Headers): Headers {
   const result = new Headers(headers);
   if (!result.get("content-type")?.trim()) result.set("content-type", "application/octet-stream");

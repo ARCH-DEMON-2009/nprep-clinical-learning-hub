@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { isAllowedMediaHost, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, nprepSiteOrigin } from "@/lib/media-proxy";
+import { isAllowedMediaHost, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, nprepApiOrigin } from "@/lib/media-proxy";
 
 // Transparent pass-through to the NPrep backend so the browser avoids CORS.
 // It holds no secrets: the caller's own bearer token is forwarded unchanged.
@@ -7,7 +7,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
   const url = new URL(request.url);
   let target = new URL(`https://api.nprep.in/${params._splat ?? ""}${url.search}`);
   const headers = new Headers();
-  const siteOrigin = nprepSiteOrigin(request.url, request.headers.get("origin"), request.headers.get("referer"));
+  const siteOrigin = nprepApiOrigin(request, params._splat ?? "");
   headers.set("origin", siteOrigin);
   headers.set("referer", `${siteOrigin}/`);
   const auth = request.headers.get("authorization");
