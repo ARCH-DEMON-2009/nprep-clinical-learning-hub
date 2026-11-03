@@ -15,8 +15,12 @@ async function forward({ request, params }: { request: Request; params: { _splat
   const ct = request.headers.get("content-type");
   if (ct) headers.set("content-type", ct);
   const userAgent = request.headers.get("user-agent");
-  if (userAgent) headers.set("user-agent", userAgent);
-  headers.set("accept", "application/json");
+  headers.set("user-agent", userAgent || "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36");
+  for (const name of ["accept-language", "sec-fetch-site", "sec-fetch-mode", "sec-fetch-dest"]) {
+    const value = request.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  headers.set("accept", "application/json, text/plain, */*");
   let method = request.method;
   let body: BodyInit | undefined = ["GET", "HEAD"].includes(method) ? undefined : await request.text();
   const signedCookies = new Map<string, string>();
