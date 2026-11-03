@@ -9,8 +9,8 @@ import { Route as NprepRoute } from "../routes/api/nprep.$";
 import { Route as MediaRoute } from "../routes/api/media.$";
 
 type Handler = (context: { request: Request; params: { _splat: string } }) => Promise<Response>;
-const nprep = (NprepRoute as unknown as { server: { handlers: Record<string, Handler> } }).server.handlers;
-const media = (MediaRoute as unknown as { server: { handlers: Record<string, Handler> } }).server.handlers;
+const nprep = (NprepRoute as unknown as { server: { handlers: { GET: Handler; POST: Handler } } }).server.handlers;
+const media = (MediaRoute as unknown as { server: { handlers: { GET: Handler; POST: Handler } } }).server.handlers;
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -18,7 +18,7 @@ afterEach(() => vi.unstubAllGlobals());
 function captureFetch() {
   const calls: { url: string; method: string; headers: Headers; body?: string }[] = [];
   vi.stubGlobal("fetch", vi.fn(async (url: URL, init: RequestInit) => {
-    calls.push({ url: url.toString(), method: init.method ?? "GET", headers: new Headers(init.headers), body: init.body as string | undefined });
+    calls.push({ url: url.toString(), method: init.method ?? "GET", headers: new Headers(init.headers), ...(typeof init.body === "string" ? { body: init.body } : {}) });
     return new Response(JSON.stringify({ ok: true }), { headers: { "content-type": "application/json" } });
   }));
   return calls;
@@ -34,7 +34,7 @@ describe("NPrep pass-through uses the accepted origin", () => {
   it("sends OTP verification with nprep.in origin and an unchanged body", async () => {
     const calls = captureFetch();
     const body = JSON.stringify({ phone_number: "9000000000", otp: "000000" });
-    const response = await nprep.POST!({
+    const response = await nprep.POST({
       request: betaRequest("v3/auth/login", { method: "POST", body, headers: { "content-type": "application/json" } }),
       params: { _splat: "v3/auth/login" },
     });
@@ -57,7 +57,7 @@ describe("NPrep pass-through uses the accepted origin", () => {
     ["v3/video", "?videoId=31"],
   ])("sends %s%s with nprep.in origin and the user's bearer token", async (path, query) => {
     const calls = captureFetch();
-    await nprep.GET!({
+    await nprep.GET({
       request: betaRequest(`${path}${query}`, { headers: { authorization: "Bearer user-token" } }),
       params: { _splat: path },
     });
@@ -75,7 +75,7 @@ describe("NPrep pass-through uses the accepted origin", () => {
       if (seen.length === 2) return new Response(null, { status: 302, headers: { location: "https://dsj0ye61xl4q1.cloudfront.net/a.mpd" } });
       return new Response("{}", { headers: { "content-type": "application/json" } });
     }));
-    await nprep.GET!({
+    await nprep.GET({
       request: betaRequest("v3/video?videoId=31", { headers: { authorization: "Bearer user-token" } }),
       params: { _splat: "v3/video" },
     });
@@ -86,7 +86,7 @@ describe("NPrep pass-through uses the accepted origin", () => {
 describe("lecture relay uses the accepted origin for NPrep API links", () => {
   it("sends API-hosted lecture links with nprep.in origin and the user's bearer token", async () => {
     const calls = captureFetch();
-    await media.GET!({
+    await media.GET({
       request: new Request("https://beta.nprep.site/api/media/relay/x/", {
         headers: { origin: "https://beta.nprep.site", authorization: "Bearer user-token" },
       }),
