@@ -43,7 +43,10 @@ async function forward({ request, params }: { request: Request; params: { _splat
   if (!allowedTarget(target)) return new Response("Media host is not allowed", { status: 403 });
 
   const headers = new Headers();
-  const siteOrigin = nprepSiteOrigin(request.url, request.headers.get("origin"), request.headers.get("referer"));
+  // The NPrep API rejects beta origins before auth, so API-hosted lecture links use the accepted origin.
+  const siteOrigin = target.hostname.toLowerCase() === "api.nprep.in"
+    ? "https://nprep.in"
+    : nprepSiteOrigin(request.url, request.headers.get("origin"), request.headers.get("referer"));
   headers.set("origin", siteOrigin);
   headers.set("referer", `${siteOrigin}/`);
   for (const name of ["range", "if-range", "if-none-match", "if-modified-since", "content-type", "accept", "accept-language", "user-agent", "authorization", "soapaction"]) {

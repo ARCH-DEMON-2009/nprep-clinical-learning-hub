@@ -190,7 +190,7 @@ export function assessmentQuestionSource(catalog: any, id: string, fallback: any
   const entity = findEntity(catalog, id) ?? fallback;
   const path = questionPath(entity);
   const paths = [path, ...(kind ? assessmentQuestionCandidates(kind, id) : [])].filter((candidate): candidate is string => Boolean(candidate));
-  return { entity, path, paths: [...new Set(paths)] };
+  return { entity, ...(path ? { path } : {}), paths: [...new Set(paths)] };
 }
 
 export function assessmentQuestionCandidates(kind: "test" | "qbank", id: string, options?: { type?: string; moduleId?: string }): string[] {
