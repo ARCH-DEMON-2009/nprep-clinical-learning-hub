@@ -51,6 +51,31 @@ describe("NPrep pass-through uses the accepted origin", () => {
     expect(calls[0]?.body).toBe(body);
   });
 
+  it("falls back to production when the development OTP API returns Forbidden", async () => {
+    const calls: URL[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: URL) => {
+      calls.push(new URL(url));
+      if (url.hostname === "dev-api.nprep.in") return new Response("Forbidden", { status: 403 });
+      return new Response(JSON.stringify({ sent: true }), { status: 200, headers: { "content-type": "application/json" } });
+    }));
+    const response = await nprep.POST({
+      request: betaRequest("v3/auth/request-otp", { method: "POST", body: JSON.stringify({ phone_number: "7037917438", country_code: "+91" }), headers: { "content-type": "application/json" } }),
+      params: { _splat: "v3/auth/request-otp" },
+    });
+    expect(response.status).toBe(200);
+    expect(calls.map((url) => url.hostname)).toEqual(["dev-api.nprep.in", "api.nprep.in"]);
+  });
+
+  it("returns a retryable error when both OTP origins return Forbidden", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("Forbidden", { status: 403 })));
+    const response = await nprep.POST({
+      request: betaRequest("v3/auth/request-otp", { method: "POST", body: JSON.stringify({ phone_number: "7037917438", country_code: "+91" }), headers: { "content-type": "application/json" } }),
+      params: { _splat: "v3/auth/request-otp" },
+    });
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("60");
+  });
+
   it.each([
     ["v3/auth/me", ""],
     ["v3/home", ""],

@@ -5,7 +5,7 @@ import { isAllowedMediaHost, isNprepSiteHost, localMediaCookies, localMediaCooki
 // It holds no secrets: the caller's own bearer token is forwarded unchanged.
 async function forward({ request, params }: { request: Request; params: { _splat?: string } }) {
   const url = new URL(request.url);
-  let target = new URL(`https://api.nprep.in/${params._splat ?? ""}${url.search}`);
+  let target = new URL(`https://${(params._splat ?? "") === "v3/auth/request-otp" ? "dev-api.nprep.in" : "api.nprep.in"}/${params._splat ?? ""}${url.search}`);
   const headers = new Headers();
   const siteOrigin = nprepApiOrigin(request, params._splat ?? "");
   headers.set("origin", siteOrigin);
@@ -36,6 +36,17 @@ async function forward({ request, params }: { request: Request; params: { _splat
       const pair = cookie.split(";", 1)[0] ?? "";
       const separator = pair.indexOf("=");
       if (separator > 0) signedCookies.set(pair.slice(0, separator), pair.slice(separator + 1));
+    }
+    if ((params._splat ?? "") === "v3/auth/request-otp" && res.status === 403 && target.hostname === "dev-api.nprep.in") {
+      await res.body?.cancel();
+      target.hostname = "api.nprep.in";
+      continue;
+    }
+    if ((params._splat ?? "") === "v3/auth/request-otp" && res.status === 403) {
+      return new Response(JSON.stringify({ message: "OTP service is temporarily blocked by NPrep. Please wait and retry." }), {
+        status: 429,
+        headers: { "content-type": "application/json", "retry-after": "60" },
+      });
     }
     const location = res.headers.get("location");
     if (![301, 302, 303, 307, 308].includes(res.status) || !location) break;
