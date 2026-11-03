@@ -48,6 +48,9 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
   }
   if (!res.ok) {
     const m = body?.message;
+    if (res.status === 429 && (!m || /forbidden/i.test(String(m)))) {
+      throw new ApiError("OTP service is temporarily blocked. Please wait 60 seconds and retry.", res.status);
+    }
     throw new ApiError(Array.isArray(m) ? m.join(", ") : m || `Request failed (${res.status})`, res.status);
   }
   return body as T;

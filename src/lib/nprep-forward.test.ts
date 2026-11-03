@@ -73,6 +73,7 @@ describe("NPrep pass-through uses the accepted origin", () => {
       params: { _splat: "v3/auth/request-otp" },
     });
     expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("60");
   });
 
   it.each([
