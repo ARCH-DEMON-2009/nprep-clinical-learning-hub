@@ -51,6 +51,21 @@ describe("NPrep pass-through uses the accepted origin", () => {
     expect(calls[0]?.body).toBe(body);
   });
 
+  it("falls back to the development API when OTP production returns Forbidden", async () => {
+    const calls: URL[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: URL) => {
+      calls.push(new URL(url));
+      if (url.hostname === "api.nprep.in") return new Response("Forbidden", { status: 403 });
+      return new Response(JSON.stringify({ sent: true }), { status: 200, headers: { "content-type": "application/json" } });
+    }));
+    const response = await nprep.POST({
+      request: betaRequest("v3/auth/request-otp", { method: "POST", body: JSON.stringify({ phone_number: "7037917438", country_code: "+91" }), headers: { "content-type": "application/json" } }),
+      params: { _splat: "v3/auth/request-otp" },
+    });
+    expect(response.status).toBe(200);
+    expect(calls.map((url) => url.hostname)).toEqual(["api.nprep.in", "dev-api.nprep.in"]);
+  });
+
   it.each([
     ["v3/auth/me", ""],
     ["v3/home", ""],

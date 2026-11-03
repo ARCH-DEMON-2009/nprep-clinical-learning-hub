@@ -37,6 +37,11 @@ async function forward({ request, params }: { request: Request; params: { _splat
       const separator = pair.indexOf("=");
       if (separator > 0) signedCookies.set(pair.slice(0, separator), pair.slice(separator + 1));
     }
+    if ((params._splat ?? "") === "v3/auth/request-otp" && res.status === 403 && target.hostname === "api.nprep.in") {
+      await res.body?.cancel();
+      target.hostname = "dev-api.nprep.in";
+      continue;
+    }
     const location = res.headers.get("location");
     if (![301, 302, 303, 307, 308].includes(res.status) || !location) break;
     if (redirects === 5) return new Response("Too many NPrep redirects", { status: 502 });
