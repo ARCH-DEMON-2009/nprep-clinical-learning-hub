@@ -43,6 +43,7 @@ describe("NPrep pass-through uses the accepted origin", () => {
     expect(calls[0]?.url).toBe("https://api.nprep.in/v3/auth/login");
     expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
     expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
+    expect(calls[0]?.headers.get("user-agent")).toContain("Mozilla/5.0");
     expect(calls[0]?.body).toBe(body);
   });
 
