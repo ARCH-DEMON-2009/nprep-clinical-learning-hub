@@ -44,6 +44,9 @@ describe("NPrep pass-through uses the accepted origin", () => {
     expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
     expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
     expect(calls[0]?.headers.get("user-agent")).toContain("Mozilla/5.0");
+    expect(calls[0]?.headers.get("sec-fetch-site")).toBe("cross-site");
+    expect(calls[0]?.headers.get("sec-fetch-mode")).toBe("cors");
+    expect(calls[0]?.headers.get("sec-fetch-dest")).toBe("empty");
     expect(calls[0]?.headers.get("x-requested-with")).toBeNull();
     expect(calls[0]?.body).toBe(body);
   });
