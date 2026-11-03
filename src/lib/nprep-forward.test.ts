@@ -72,8 +72,8 @@ describe("NPrep pass-through uses the accepted origin", () => {
       request: betaRequest("v3/auth/request-otp", { method: "POST", body: JSON.stringify({ phone_number: "7037917438", country_code: "+91" }), headers: { "content-type": "application/json" } }),
       params: { _splat: "v3/auth/request-otp" },
     });
-    expect(response.status).toBe(429);
-    expect(response.headers.get("retry-after")).toBe("60");
+    expect(response.status).toBe(403);
+    expect(response.headers.get("retry-after")).toBeNull();
   });
 
   it.each([
