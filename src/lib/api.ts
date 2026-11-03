@@ -48,6 +48,9 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
   }
   if (!res.ok) {
     const m = body?.message;
+    if (path === "/auth/request-otp" && res.status === 403) {
+      throw new ApiError("NPrep is currently rejecting OTP requests. Please try again later.", res.status);
+    }
     throw new ApiError(Array.isArray(m) ? m.join(", ") : m || `Request failed (${res.status})`, res.status);
   }
   return body as T;

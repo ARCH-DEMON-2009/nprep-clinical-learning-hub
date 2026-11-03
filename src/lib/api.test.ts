@@ -1,5 +1,16 @@
-import { describe, expect, it } from "vitest";
-import { firstArray, findKey, idOf, isExpiredSessionResponse, titleOf, unwrap } from "./api";
+import { describe, expect, it, vi } from "vitest";
+import { api, firstArray, findKey, idOf, isExpiredSessionResponse, titleOf, unwrap } from "./api";
+
+describe("API client", () => {
+  it("shows an actionable OTP rejection without exposing raw Forbidden", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ message: "NPrep rejected the OTP request (Forbidden)." }), {
+      status: 403,
+      headers: { "content-type": "application/json" },
+    })));
+    await expect(api("/auth/request-otp", { method: "POST", body: "{}" })).rejects.toThrow("NPrep is currently rejecting OTP requests");
+    vi.unstubAllGlobals();
+  });
+});
 
 describe("api helpers", () => {
   it("treats authenticated 401 and 403 responses as expired sessions", () => {
