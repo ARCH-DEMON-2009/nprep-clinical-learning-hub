@@ -43,9 +43,9 @@ async function forward({ request, params }: { request: Request; params: { _splat
       continue;
     }
     if ((params._splat ?? "") === "v3/auth/request-otp" && res.status === 403) {
-      return new Response(JSON.stringify({ message: "OTP service is temporarily blocked by NPrep. Please wait and retry." }), {
-        status: 429,
-        headers: { "content-type": "application/json", "retry-after": "60" },
+      return new Response(JSON.stringify({ message: "NPrep rejected the OTP request (Forbidden).", upstream: { status: res.status, message: "Forbidden" } }), {
+        status: 403,
+        headers: { "content-type": "application/json" },
       });
     }
     const location = res.headers.get("location");
