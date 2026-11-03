@@ -24,6 +24,9 @@ export class ApiError extends Error {
   }
 }
 
+export const isExpiredSessionResponse = (status: number, token: string | null) =>
+  !!token && (status === 401 || status === 403);
+
 export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
   const res = await fetch(BASE + path, {
@@ -39,7 +42,7 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
   try {
     body = text ? JSON.parse(text) : null;
   } catch {}
-  if (res.status === 401 && token) {
+  if (isExpiredSessionResponse(res.status, token)) {
     clearToken();
     window.location.href = "/login";
   }

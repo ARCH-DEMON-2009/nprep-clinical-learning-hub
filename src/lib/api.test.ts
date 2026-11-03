@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { firstArray, findKey, idOf, titleOf, unwrap } from "./api";
+import { firstArray, findKey, idOf, isExpiredSessionResponse, titleOf, unwrap } from "./api";
 
 describe("api helpers", () => {
+  it("treats authenticated 401 and 403 responses as expired sessions", () => {
+    expect(isExpiredSessionResponse(401, "token")).toBe(true);
+    expect(isExpiredSessionResponse(403, "token")).toBe(true);
+    expect(isExpiredSessionResponse(403, null)).toBe(false);
+    expect(isExpiredSessionResponse(200, "token")).toBe(false);
+  });
+
   it("finds a nested token", () => {
     expect(findKey({ data: { user: {}, access_token: "abc" } }, /token/i)).toBe("abc");
   });
