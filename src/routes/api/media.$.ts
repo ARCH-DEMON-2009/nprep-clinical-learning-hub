@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, embeddedMediaRedirect, ensureMediaPostContentType, isAllowedMediaHost, isNprepSiteHost, localMediaCookies, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "@/lib/media-proxy";
+import { applyNprepClientHeaders, cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, embeddedMediaRedirect, ensureMediaPostContentType, isAllowedMediaHost, isNprepSiteHost, localMediaCookies, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "@/lib/media-proxy";
 
 const MEDIA_TOKEN_COOKIE = "nprep_media_token";
 

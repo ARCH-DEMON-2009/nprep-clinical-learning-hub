@@ -43,7 +43,9 @@ describe("NPrep pass-through uses the accepted origin", () => {
     expect(calls[0]?.url).toBe("https://api.nprep.in/v3/auth/login");
     expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
     expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
-    expect(calls[0]?.headers.get("user-agent")).toContain("Mozilla/5.0");
+    // NPrep returns 403 to browser agents; it needs the app's agent and a semver x-app-version.
+    expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
+    expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
     expect(calls[0]?.headers.get("sec-fetch-site")).toBe("cross-site");
     expect(calls[0]?.headers.get("sec-fetch-mode")).toBe("cors");
     expect(calls[0]?.headers.get("sec-fetch-dest")).toBe("empty");
