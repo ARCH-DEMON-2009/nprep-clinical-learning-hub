@@ -34,7 +34,8 @@ describe("NPrep question data", () => {
     ]);
     expect(testListPath("PYQ", "24")).toBe("/test/list?type=PYQ&module_id=24");
     expect(assessmentQuestionCandidates("qbank", "5")).toEqual([
-      "/qbank/questions?subjectId=5",
+      "/qbank/topics?subjectId=5",
+      "/qbank/category?subjectId=5",
     ]);
   });
   it("follows a supplied NPrep question URL", () => {

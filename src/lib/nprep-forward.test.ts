@@ -97,6 +97,8 @@ describe("NPrep pass-through uses the accepted origin", () => {
     expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
     expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
     expect(calls[0]?.headers.get("authorization")).toBe("Bearer user-token");
+    expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
+    expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
   });
 
   it("keeps the bearer token on NPrep redirects but drops it for CDN redirects", async () => {
@@ -127,5 +129,17 @@ describe("lecture relay uses the accepted origin for NPrep API links", () => {
     expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
     expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
     expect(calls[0]?.headers.get("authorization")).toBe("Bearer user-token");
+    expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
+    expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
+  });
+
+  it("keeps the browser agent for CDN media", async () => {
+    const calls = captureFetch();
+    await media.GET({
+      request: new Request("https://beta.nprep.site/api/media/relay/x/", { headers: { "user-agent": "Mozilla/5.0 Test" } }),
+      params: { _splat: `relay/${encodeMediaTarget("https://dsj0ye61xl4q1.cloudfront.net/a.mpd")}` },
+    });
+    expect(calls[0]?.headers.get("user-agent")).toBe("Mozilla/5.0 Test");
+    expect(calls[0]?.headers.get("x-app-version")).toBeNull();
   });
 });
