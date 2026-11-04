@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, embeddedMediaRedirect, ensureMediaPostContentType, isAllowedMediaHost, isNprepSiteHost, localMediaCookies, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "@/lib/media-proxy";
+import { applyNprepClientHeaders, cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, embeddedMediaRedirect, ensureMediaPostContentType, isAllowedMediaHost, isNprepSiteHost, localMediaCookies, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "@/lib/media-proxy";
 
 const MEDIA_TOKEN_COOKIE = "nprep_media_token";
 
@@ -53,6 +53,8 @@ async function forward({ request, params }: { request: Request; params: { _splat
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }
+  // API-hosted lecture links need the NPrep app identity; CDN requests keep the browser agent.
+  if (target.hostname.toLowerCase() === "api.nprep.in") applyNprepClientHeaders(headers);
   if (request.method === "POST") {
     const withContentType = ensureMediaPostContentType(headers);
     withContentType.forEach((value, name) => headers.set(name, value));

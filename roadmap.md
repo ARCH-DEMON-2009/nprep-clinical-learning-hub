@@ -1,4 +1,5 @@
 # NPrep playback and question taking
+- [x] Fix remaining Forbidden (from uploaded app source): API needs NPrep app User-Agent + x-app-version; live GETs now reach sign-in check (401) instead of 403. QBank subjects open topics/categories via app paths.
 - [x] Confirm beta-origin rejection across login/content using GET only; set v3 API origin to nprep.in, preserve auth, and restrict media redirects to trusted hosts; 37 regression tests pass. Live OTP verification/playback remain unverified; no OTP/session initiated.
 - [x] Fix OTP Forbidden with the verified origin for unauthenticated OTP requests only; 35 static/unit regression tests pass without sending OTPs.
 - [x] Send OTP verification, content and API-hosted lecture links with the accepted NPrep origin and the user token; 11 handler regression tests added (81 total pass).

@@ -202,7 +202,11 @@ export function assessmentQuestionCandidates(kind: "test" | "qbank", id: string,
       `/test/attempt/question`,
     ];
   }
-  return [`/qbank/questions?subjectId=${encodeURIComponent(id)}`];
+  // Paths taken from the NPrep app build: subjects list topics/categories, which then hold questions.
+  return [
+    `/qbank/topics?subjectId=${encodeURIComponent(id)}`,
+    `/qbank/category?subjectId=${encodeURIComponent(id)}`,
+  ];
 }
 
 export function testListPath(type: string, moduleId: string): string {

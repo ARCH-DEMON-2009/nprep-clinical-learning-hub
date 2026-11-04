@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { isAllowedMediaHost, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, nprepApiOrigin } from "@/lib/media-proxy";
+import { applyNprepClientHeaders, isAllowedMediaHost, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, nprepApiOrigin } from "@/lib/media-proxy";
 
 // Transparent pass-through to the NPrep backend so the browser avoids CORS.
 // It holds no secrets: the caller's own bearer token is forwarded unchanged.
@@ -14,8 +14,8 @@ async function forward({ request, params }: { request: Request; params: { _splat
   if (auth) headers.set("authorization", auth);
   const ct = request.headers.get("content-type");
   if (ct) headers.set("content-type", ct);
-  const userAgent = request.headers.get("user-agent");
-  headers.set("user-agent", userAgent || "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36");
+  // NPrep's API refuses browser user agents with 403; identify as the NPrep app.
+  applyNprepClientHeaders(headers);
   headers.set("accept-language", request.headers.get("accept-language") || "en-IN,en;q=0.9");
   headers.set("sec-fetch-site", "cross-site");
   headers.set("sec-fetch-mode", "cors");
