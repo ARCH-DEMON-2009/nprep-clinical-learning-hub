@@ -129,6 +129,20 @@ export function nprepApiOrigin(request: Request, path: string): string {
   return nprepSiteOrigin(request.url, request.headers.get("origin"), request.headers.get("referer"));
 }
 
+/** Version of the uploaded NPrep Android app (versionName in its manifest). */
+export const NPREP_APP_VERSION = "5.4.2";
+
+/**
+ * NPrep's API answers 403 before routing/auth unless the caller identifies as the
+ * NPrep app: a semver `x-app-version` plus an `NPrep/` (or `Dart/`) User-Agent.
+ * Browser, curl and okhttp agents are refused. Sign-in is still enforced (401).
+ */
+export function applyNprepClientHeaders(headers: Headers): Headers {
+  headers.set("user-agent", `NPrep/${NPREP_APP_VERSION}`);
+  headers.set("x-app-version", NPREP_APP_VERSION);
+  return headers;
+}
+
 export function ensureMediaPostContentType(headers: Headers): Headers {
   const result = new Headers(headers);
   if (!result.get("content-type")?.trim()) result.set("content-type", "application/octet-stream");
