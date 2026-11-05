@@ -233,3 +233,27 @@ export function assessmentChildren(entity: any): any[] {
   };
   return visit(unwrap(entity));
 }
+// QBank paths seen in the NPrep app build: topics/categories per subject, then an attempt that serves questions.
+export function qbankCategoryPaths(id: string): string[] {
+  if (!id) return [];
+  const v = encodeURIComponent(id);
+  return [`/qbank/category?categoryId=${v}`, `/qbank/category?category_id=${v}`, `/qbank/topics?topicId=${v}`];
+}
+
+export function attemptIdOf(response: any): string | undefined {
+  const visit = (value: any, depth = 0): string | undefined => {
+    if (!value || typeof value !== "object" || depth > 5) return undefined;
+    const direct = value.attempt_id ?? value.attemptId;
+    if (direct != null && direct !== "") return String(direct);
+    for (const child of Object.values(value)) {
+      const found = visit(child, depth + 1);
+      if (found) return found;
+    }
+    return undefined;
+  };
+  return visit(response);
+}
+
+export function qbankQuestionPath(attemptId: string, index: number): string {
+  return `/qbank/attempt/question?attempt_id=${encodeURIComponent(attemptId)}&question_index=${index}`;
+}
