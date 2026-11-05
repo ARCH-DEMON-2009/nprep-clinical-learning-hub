@@ -20,6 +20,17 @@ describe("lecture response normalization", () => {
   it("extracts embedded NPrep resolver destinations", () => {
     expect(embeddedMediaRedirect(`<meta http-equiv="refresh" content="0; url=https://cdn.example/video.mpd?a=1&amp;b=2">`)).toBe("https://cdn.example/video.mpd?a=1&b=2");
     expect(embeddedMediaRedirect(`window.location.href = "https://cdn.example/video.m3u8";`)).toBe("https://cdn.example/video.m3u8");
+    expect(
+      embeddedMediaRedirect(
+        `<meta content="0;url='https://cdn.example/video.mp4'" http-equiv="refresh">`,
+      ),
+    ).toBe("https://cdn.example/video.mp4");
+    expect(
+      embeddedMediaRedirect(`window.location.replace("https://cdn.example/video.mpd")`),
+    ).toBe("https://cdn.example/video.mpd");
+    expect(
+      embeddedMediaRedirect(`location.assign('https://cdn.example/video.m3u8')`),
+    ).toBe("https://cdn.example/video.m3u8");
   });
   it("recognizes signed CloudFront media even when DRM metadata is absent", () => {
     const manifest = "https://dsj0ye61xl4q1.cloudfront.net/videos/lesson/drm/master.mpd?Policy=p&Signature=s&Key-Pair-Id=k&drm_type=widevine";

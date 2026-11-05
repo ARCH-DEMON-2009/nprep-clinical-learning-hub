@@ -32,9 +32,18 @@ export function mediaProxyUrl(target: string): string {
 }
 
 export function embeddedMediaRedirect(html: string): string | undefined {
-  const destination = html.match(/http-equiv=["']refresh["'][^>]*content=["'][^"']*url=([^"']+)/i)?.[1]
-    ?? html.match(/(?:window\.)?location(?:\.href)?\s*=\s*["']([^"']+)/i)?.[1]
-    ?? html.match(/(?:href|url)["']?\s*[:=]\s*["'](https?:\/\/[^"']+)/i)?.[1];
+  const meta = [...html.matchAll(/<meta\b[^>]*>/gi)].find((match) =>
+    /\bhttp-equiv\s*=\s*["']?refresh["']?/i.test(match[0] ?? ""));
+  const content = meta?.[0]?.match(/\bcontent\s*=\s*(["'])(.*?)\1/i)?.[2];
+  const destination =
+    content
+      ?.match(/(?:^|;)\s*url\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s]+))/i)
+      ?.slice(1)
+      .find(Boolean)
+      ?.replace(/;$/, "") ??
+    html.match(/(?:window\.)?location(?:\.href)?\s*=\s*["'](https?:\/\/[^"']+)/i)?.[1] ??
+    html.match(/(?:window\.)?location\.(?:replace|assign)\s*\(\s*["'](https?:\/\/[^"']+)/i)?.[1] ??
+    html.match(/(?:href|url)["']?\s*[:=]\s*["'](https?:\/\/[^"']+)/i)?.[1];
   return destination?.replace(/&amp;/gi, "&").replace(/["']+$/, "");
 }
 
