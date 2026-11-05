@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { formatClock, loadResults, type AttemptResult } from "@/lib/results";
 import { Assessment } from "@/components/Assessment";
 import { Button } from "@/components/ui/button";
 import { Loading, PageTitle } from "@/components/AppShell";
@@ -30,6 +31,12 @@ function Tests() {
   const [selected, setSelected] = useState<any>();
   const [selectedModule, setSelectedModule] = useState<any>();
   const [category, setCategory] = useState("all");
+  const [results, setResults] = useState<AttemptResult[]>([]);
+  useEffect(() => {
+    const read = () => setResults(loadResults().filter((r) => r.kind === "test"));
+    read(); window.addEventListener("nprep-results", read);
+    return () => window.removeEventListener("nprep-results", read);
+  }, []);
   const modules: any[] = (() => {
     const found: any[] = [];
     const visit = (value: any, depth = 0) => {
@@ -144,6 +151,21 @@ function Tests() {
         );
       })}
 
+      {results.length > 0 && <section className="mb-10">
+        <h2 className="mb-3 font-display text-xl font-semibold">My results</h2>
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted text-left text-muted-foreground"><tr><th className="p-3">Test</th><th className="p-3">Score</th><th className="p-3">Correct / wrong</th><th className="p-3">Time</th><th className="p-3">Date</th></tr></thead>
+            <tbody>{results.slice(0, 20).map((r) => <tr key={r.id} className="border-t border-border">
+              <td className="p-3 font-medium">{r.title}</td>
+              <td className="p-3">{r.score != null ? `${r.score}%` : `${r.answered}/${r.total} answered`}</td>
+              <td className="p-3">{r.correct} / {r.wrong}</td>
+              <td className="p-3">{formatClock(r.durationSec)}</td>
+              <td className="p-3">{new Date(r.finishedAt).toLocaleDateString("en-IN")}</td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+      </section>}
       {selected && <Assessment item={selected} kind="test" onClose={() => setSelected(undefined)} />}
 
     </div>
