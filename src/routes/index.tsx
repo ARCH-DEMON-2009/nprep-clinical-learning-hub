@@ -6,7 +6,7 @@ import { api, findArrays, findKey, imageOf, label, unwrap, idOf, titleOf } from 
 import { ArrowRight, BookOpen, ClipboardCheck, Library, PlayCircle, Activity } from "lucide-react";
 
 import { CatalogBrowser } from "@/components/CatalogBrowser";
-import { catalogEntities, dailyStats, recentLectures, uniqueEntities } from "@/lib/catalog";
+import { catalogEntities, dailyStats, recentLectures, withRapidRevision } from "@/lib/catalog";
 
 export const Route = createFileRoute("/")({
   head: () => ({
