@@ -1,4 +1,7 @@
 # NPrep playback and question taking
+- [x] QBank topic → category → question flow using the app's /qbank/topics, /qbank/category, /qbank/attempt and /qbank/attempt/question paths (88 tests pass; live data unverified).
+- [ ] Save test/QBank attempts and results to the user's database: deferred to a later pass with Tests; needs a results table.
+- [ ] Rapid Revision 2.0 in catalog and Tests flow: deferred to a later pass per request.
 - [x] Fix remaining Forbidden (from uploaded app source): API needs NPrep app User-Agent + x-app-version; live GETs now reach sign-in check (401) instead of 403. QBank subjects open topics/categories via app paths.
 - [x] Confirm beta-origin rejection across login/content using GET only; set v3 API origin to nprep.in, preserve auth, and restrict media redirects to trusted hosts; 37 regression tests pass. Live OTP verification/playback remain unverified; no OTP/session initiated.
 - [x] Fix OTP Forbidden with the verified origin for unauthenticated OTP requests only; 35 static/unit regression tests pass without sending OTPs.

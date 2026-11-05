@@ -91,3 +91,14 @@ describe("NPrep question data", () => {
     expect(assessmentChildren(sections[0])).toEqual([{ id: 118 }]);
   });
 });
+import { attemptIdOf, qbankCategoryPaths, qbankQuestionPath } from "./assessment";
+describe("qbank attempt flow", () => {
+  it("finds nested attempt ids", () => {
+    expect(attemptIdOf({ data: { attempt: { attempt_id: 42 } } })).toBe("42");
+    expect(attemptIdOf({ success: true })).toBeUndefined();
+  });
+  it("builds category and question paths", () => {
+    expect(qbankCategoryPaths("7")[0]).toBe("/qbank/category?categoryId=7");
+    expect(qbankQuestionPath("a1", 3)).toBe("/qbank/attempt/question?attempt_id=a1&question_index=3");
+  });
+});
