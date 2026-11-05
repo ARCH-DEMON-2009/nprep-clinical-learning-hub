@@ -82,3 +82,12 @@ export function dailyStats(value: any): { label: string; value: string }[] {
   return Object.entries(node).filter(([, value]) => typeof value === "number" || typeof value === "string")
     .map(([key, value]) => ({ label: key.replace(/_/g, " "), value: String(value) }));
 }
+// Rapid Revision 2.0 is NPrep edition 53, whose lectures live in course 75.
+export const RAPID_REVISION_BATCH = {
+  id: "53", edition_id: 53, name: "Rapid Revision 2.0",
+  courses: [{ id: "75", course_id: 75, name: "Rapid Revision 2.0", type: "course" }],
+};
+
+export function withRapidRevision(batches: any[]): any[] {
+  return uniqueEntities([...batches, RAPID_REVISION_BATCH]);
+}

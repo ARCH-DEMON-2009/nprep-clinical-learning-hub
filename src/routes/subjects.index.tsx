@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ErrorBox, Loading, PageTitle, useMe } from "@/components/AppShell";
 import { CatalogBrowser } from "@/components/CatalogBrowser";
 import { Button } from "@/components/ui/button";
-import { catalogEntities, uniqueEntities } from "@/lib/catalog";
+import { catalogEntities, withRapidRevision } from "@/lib/catalog";
 import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/subjects/")({
@@ -25,7 +25,7 @@ function Subjects() {
   const home = useQuery({ queryKey: ["home"], queryFn: () => api("/home") });
   const me = useMe();
   const subjects = catalogEntities(q.data, "subject", true);
-  const batches = uniqueEntities([...catalogEntities(home.data, "batch"), ...catalogEntities(me.data, "batch"), ...catalogEntities(q.data, "batch")]);
+  const batches = withRapidRevision([...catalogEntities(home.data, "batch"), ...catalogEntities(me.data, "batch"), ...catalogEntities(q.data, "batch")]);
   return <div>
     <PageTitle title="Courses & Lectures" sub={subjects.length ? `${subjects.length} subjects` : undefined} />
     {q.isLoading && <Loading />}

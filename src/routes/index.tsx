@@ -28,7 +28,7 @@ function Dashboard() {
   const name = findKey(me.data, /^(name|full_?name|first_?name)$/i);
   const groups = findArrays(unwrap(q.data));
   const banners = groups.find((g) => /banner|slider|carousel/i.test(g.name));
-  const batches = uniqueEntities([...catalogEntities(q.data, "batch"), ...catalogEntities(me.data, "batch")]);
+  const batches = withRapidRevision([...catalogEntities(q.data, "batch"), ...catalogEntities(me.data, "batch")]);
   const recent = recentLectures(q.data);
   const stats = dailyStats(q.data);
   const rest = groups.filter((g) => g !== banners && !/batch|edition|recent|resume|continue|stats/i.test(g.name));
