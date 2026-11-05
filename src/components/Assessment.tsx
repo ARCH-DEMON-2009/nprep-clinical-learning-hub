@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, RotateCcw } from "lucide-react";
 import { api, idOf, titleOf, questionCount } from "@/lib/api";
-import { assessmentChildren, assessmentDiagnostics, assessmentQuestionCandidates, assessmentQuestionCount, assessmentQuestionSource, assessmentShareLink, questionList, questionPath, type Question } from "@/lib/assessment";
+import { assessmentChildren, assessmentDiagnostics, assessmentQuestionCandidates, assessmentQuestionCount, assessmentQuestionSource, assessmentShareLink, attemptIdOf, qbankCategoryPaths, qbankQuestionPath, questionList, questionPath, type Question } from "@/lib/assessment";
 import { ErrorBox, Loading } from "./AppShell";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
@@ -25,6 +25,7 @@ function AssessmentContent({ item, kind }: { item: any; kind: "test" | "qbank" }
     queryKey: ["assessment", kind, idOf(current), path],
     queryFn: async () => {
       if (path) return api(path);
+      if (kind === "qbank" && selected) return loadQbankCategory(current);
       const catalog = await api(kind === "test" ? "/test" : "/qbank/subjects");
       const source = assessmentQuestionSource(catalog, idOf(current) ?? "", current, kind);
       if (source.paths.length === 0) return source.entity;
@@ -79,6 +80,32 @@ function AssessmentContent({ item, kind }: { item: any; kind: "test" | "qbank" }
         <Button variant="outline" onClick={() => q.refetch()}><RotateCcw />Retry</Button>
       </div>}
   </div>;
+}
+
+// Topic/category → nested categories, embedded questions, or an NPrep attempt serving questions by index.
+async function loadQbankCategory(entity: any) {
+  if (assessmentChildren(entity).length || questionList(entity).length) return entity;
+  const id = idOf(entity) ?? "";
+  for (const candidate of qbankCategoryPaths(id)) {
+    try {
+      const fetched = await api(candidate);
+      if (assessmentChildren(fetched).length || questionList(fetched).length) return fetched;
+    } catch {}
+  }
+  const started = await api("/qbank/attempt", { method: "POST", body: JSON.stringify({ category_id: id, categoryId: id }) });
+  if (questionList(started).length) return started;
+  const attemptId = attemptIdOf(started);
+  if (!attemptId) return started;
+  const total = assessmentQuestionCount(started) ?? questionCount(entity) ?? 50;
+  const collected: Question[] = [];
+  for (let i = 0; i < Math.min(total, 200); i += 1) {
+    let page: unknown;
+    try { page = await api(qbankQuestionPath(attemptId, i)); } catch { break; }
+    const found = questionList(page).filter((q) => !collected.some((c) => c.id === q.id));
+    if (!found.length) break;
+    collected.push(...found);
+  }
+  return collected.length ? { questions: collected.map((q) => ({ id: q.id, question: q.text, options: q.options, correct_option_id: q.correctId, explanation: q.explanation })) } : started;
 }
 
 function QuestionRunner({ questions }: { questions: Question[] }) {
