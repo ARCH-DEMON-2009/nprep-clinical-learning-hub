@@ -26,3 +26,12 @@ describe("NPrep hierarchy", () => {
     expect(dailyStats({ daily_stats: { questions_solved: 12 } })).toEqual([{ label: "questions solved", value: "12" }]);
   });
 });
+import { catalogEntities as ce, withRapidRevision } from "./catalog";
+describe("Rapid Revision 2.0", () => {
+  it("maps edition 53 to course 75 once", () => {
+    const list = withRapidRevision([{ id: "53", name: "Rapid Revision 2.0" }]);
+    expect(list.filter((b) => b.id === "53")).toHaveLength(1);
+    const rr = withRapidRevision([]).find((b) => b.id === "53");
+    expect(ce(rr, "course").map((c: any) => String(c.id))).toEqual(["75"]);
+  });
+});
