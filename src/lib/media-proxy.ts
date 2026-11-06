@@ -149,6 +149,8 @@ export const NPREP_APP_VERSION = "5.4.2";
 export function applyNprepClientHeaders(headers: Headers): Headers {
   headers.set("user-agent", `NPrep/${NPREP_APP_VERSION}`);
   headers.set("x-app-version", NPREP_APP_VERSION);
+  // The app never sends browser headers; NPrep now answers 403 when Origin/Referer are present.
+  for (const name of ["origin", "referer", "sec-fetch-site", "sec-fetch-mode", "sec-fetch-dest"]) headers.delete(name);
   return headers;
 }
 
