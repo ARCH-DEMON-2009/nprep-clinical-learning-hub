@@ -49,8 +49,8 @@ function Lecture() {
   const { videoId } = Route.useParams();
   const q = useQuery({ queryKey: ["video", videoId], queryFn: () => api(`/video?videoId=${videoId}`) });
   const v = lectureData(q.data);
-  const { src: mediaSrc, license, drmType, notes, text } = lectureMedia(v);
-  const embed = mediaSrc && /youtube\.com|youtu\.be|vimeo\.com/i.test(mediaSrc) ? mediaSrc : undefined;
+  const { embed: tpEmbed, src: mediaSrc, license, drmType, notes, text } = lectureMedia(v);
+  const embed = tpEmbed ?? (mediaSrc && /youtube\.com|youtu\.be|vimeo\.com/i.test(mediaSrc) ? mediaSrc : undefined);
   // CloudFront does not send browser CORS headers for these signed DRM manifests.
   // Route them through the relay from the first request; native MP4 playback remains direct.
   const isCloudFrontMedia = Boolean(mediaSrc && /cloudfront\.net/i.test(mediaSrc));

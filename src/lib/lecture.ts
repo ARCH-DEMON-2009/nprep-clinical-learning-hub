@@ -37,7 +37,10 @@ export function lectureMedia(value: any) {
     queryLicense = [...params.entries()].find(([key]) => key.toLowerCase() === "license_url" || key.toLowerCase() === "licenseurl")?.[1];
     drmType ??= [...params.entries()].find(([key]) => key.toLowerCase() === "drm_type" || key.toLowerCase() === "drmtype")?.[1];
   }
+  // TPStreams player links supplied by NPrep play on the service's own authorized page.
+  const embed = urls.find(([, url]) => /^https:\/\/(?:app\.)?tpstreams\.com\/embed\//i.test(url))?.[1];
   return {
+    embed,
     src,
     license: license ?? queryLicense,
     drmType,
