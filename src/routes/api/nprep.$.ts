@@ -25,12 +25,19 @@ async function forward({ request, params }: { request: Request; params: { _splat
   const signedCookies = new Map<string, string>();
   let res: Response | undefined;
   for (let redirects = 0; redirects <= 5; redirects += 1) {
-    res = await fetch(target, {
-      method,
-      headers,
-      ...(body === undefined ? {} : { body }),
-      redirect: "manual",
-    });
+    try {
+      res = await fetch(target, {
+        method,
+        headers,
+        ...(body === undefined ? {} : { body }),
+        redirect: "manual",
+      });
+    } catch {
+      return new Response(JSON.stringify({ message: "NPrep's server could not be reached. Please try again shortly." }), {
+        status: 502,
+        headers: { "content-type": "application/json" },
+      });
+    }
     for (const cookie of localMediaCookies(res.headers, new URL(request.url).protocol === "https:")) {
       const pair = cookie.split(";", 1)[0] ?? "";
       const separator = pair.indexOf("=");
