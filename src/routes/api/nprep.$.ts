@@ -17,10 +17,9 @@ async function forward({ request, params }: { request: Request; params: { _splat
   // NPrep's API refuses browser user agents with 403; identify as the NPrep app.
   applyNprepClientHeaders(headers);
   headers.set("accept-language", request.headers.get("accept-language") || "en-IN,en;q=0.9");
-  headers.set("sec-fetch-site", "cross-site");
-  headers.set("sec-fetch-mode", "cors");
-  headers.set("sec-fetch-dest", "empty");
   headers.set("accept", "application/json, text/plain, */*");
+  // Origin/Referer are only kept for non-NPrep redirect targets; api.nprep.in refuses them.
+  applyNprepClientHeaders(headers);
   let method = request.method;
   let body: BodyInit | undefined = ["GET", "HEAD"].includes(method) ? undefined : await request.text();
   const signedCookies = new Map<string, string>();
