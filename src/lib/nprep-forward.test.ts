@@ -31,7 +31,7 @@ const betaRequest = (path: string, init: RequestInit & { headers?: Record<string
   });
 
 describe("NPrep pass-through uses the accepted origin", () => {
-  it("sends OTP verification with nprep.in origin and an unchanged body", async () => {
+  it("sends OTP verification without browser Origin/Referer and an unchanged body", async () => {
     const calls = captureFetch();
     const body = JSON.stringify({ phone_number: "9000000000", otp: "000000" });
     const response = await nprep.POST({
@@ -41,8 +41,8 @@ describe("NPrep pass-through uses the accepted origin", () => {
     expect(response.status).toBe(200);
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url).toBe("https://api.nprep.in/v3/auth/login");
-    expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
-    expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
+    expect(calls[0]?.headers.get("origin")).toBeNull();
+    expect(calls[0]?.headers.get("referer")).toBeNull();
     // NPrep returns 403 to browser agents; it needs the app's agent and a semver x-app-version.
     expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
     expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
@@ -87,15 +87,15 @@ describe("NPrep pass-through uses the accepted origin", () => {
     ["v3/qbank/subjects", ""],
     ["v3/test", ""],
     ["v3/video", "?videoId=31"],
-  ])("sends %s%s with nprep.in origin and the user's bearer token", async (path, query) => {
+  ])("sends %s%s without browser Origin/Referer and the user's bearer token", async (path, query) => {
     const calls = captureFetch();
     await nprep.GET({
       request: betaRequest(`${path}${query}`, { headers: { authorization: "Bearer user-token" } }),
       params: { _splat: path },
     });
     expect(calls[0]?.url).toBe(`https://api.nprep.in/${path}${query}`);
-    expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
-    expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
+    expect(calls[0]?.headers.get("origin")).toBeNull();
+    expect(calls[0]?.headers.get("referer")).toBeNull();
     expect(calls[0]?.headers.get("authorization")).toBe("Bearer user-token");
     expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
     expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
@@ -118,7 +118,7 @@ describe("NPrep pass-through uses the accepted origin", () => {
 });
 
 describe("lecture relay uses the accepted origin for NPrep API links", () => {
-  it("sends API-hosted lecture links with nprep.in origin and the user's bearer token", async () => {
+  it("sends API-hosted lecture links without browser Origin/Referer and the user's bearer token", async () => {
     const calls = captureFetch();
     await media.GET({
       request: new Request("https://beta.nprep.site/api/media/relay/x/", {
@@ -126,8 +126,8 @@ describe("lecture relay uses the accepted origin for NPrep API links", () => {
       }),
       params: { _splat: `relay/${encodeMediaTarget("https://api.nprep.in/v3/video/stream?videoId=31")}` },
     });
-    expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
-    expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
+    expect(calls[0]?.headers.get("origin")).toBeNull();
+    expect(calls[0]?.headers.get("referer")).toBeNull();
     expect(calls[0]?.headers.get("authorization")).toBe("Bearer user-token");
     expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
     expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
