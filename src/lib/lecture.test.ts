@@ -206,3 +206,10 @@ describe("geo-blocked relay diagnostics", () => {
     expect(msg).toContain("Turn off any VPN");
   });
 });
+import { lectureMedia as lm } from "./lecture";
+describe("TPStreams embed", () => {
+  it("uses an NPrep-supplied TPStreams embed link", () => {
+    expect(lm({ player_url: "https://app.tpstreams.com/embed/org/abc/?access_token=t" }).embed).toBe("https://app.tpstreams.com/embed/org/abc/?access_token=t");
+    expect(lm({ url: "https://x.cloudfront.net/a.mpd" }).embed).toBeUndefined();
+  });
+});
