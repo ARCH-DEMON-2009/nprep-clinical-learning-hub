@@ -86,6 +86,11 @@ async function forward({ request, params }: { request: Request; params: { _splat
     if (!allowedTarget(target)) {
       return new Response("Media host is not allowed", { status: 403 });
     }
+    if (target.hostname.toLowerCase() === "api.nprep.in") applyNprepClientHeaders(headers);
+    else {
+      for (const name of ["x-app-version", "x-app-build", "x-platform"]) headers.delete(name);
+      headers.set("user-agent", request.headers.get("user-agent") || "Mozilla/5.0");
+    }
     try {
       upstream = await fetch(target, {
         method,
@@ -108,7 +113,7 @@ async function forward({ request, params }: { request: Request; params: { _splat
         headers.set("cookie", cookieHeader);
       }
     }
-    if (upstream.status === 403 && (method === "GET" || method === "HEAD")) {
+    if (target.hostname.toLowerCase() !== "api.nprep.in" && upstream.status === 403 && (method === "GET" || method === "HEAD")) {
       await upstream.body?.cancel();
       const origin = headers.get("origin");
       const fallbackSite = origin === siteOrigin ? "https://nprep.in" : siteOrigin;

@@ -25,6 +25,11 @@ async function forward({ request, params }: { request: Request; params: { _splat
   const signedCookies = new Map<string, string>();
   let res: Response | undefined;
   for (let redirects = 0; redirects <= 5; redirects += 1) {
+    if (target.hostname.toLowerCase() === "api.nprep.in") applyNprepClientHeaders(headers);
+    else {
+      for (const name of ["x-app-version", "x-app-build", "x-platform"]) headers.delete(name);
+      headers.set("user-agent", request.headers.get("user-agent") || "Mozilla/5.0");
+    }
     try {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         res = await fetch(target, {

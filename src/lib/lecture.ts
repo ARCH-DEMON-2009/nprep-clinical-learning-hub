@@ -1,4 +1,5 @@
 import { unwrap } from "./api";
+import { isNprepSiteHost, normalizeCloudFrontSignedUrl } from "./media-proxy";
 
 export function lectureData(response: unknown): any {
   const root = unwrap(response);
@@ -62,10 +63,33 @@ export function ensureDrmLicenseContentType(headers: Record<string, string>): Re
   return { ...clean, "Content-Type": "application/octet-stream" };
 }
 
-export function registerLicenseRequestFilter(engine: { registerRequestFilter: (filter: (type: number, request: { headers: Record<string, string> }) => void) => void } | null, licenseType: number) {
+export function registerLicenseRequestFilter(engine: { registerRequestFilter: (filter: (type: number, request: { headers: Record<string, string>; uris?: string[] }) => void) => void } | null, licenseType: number, token?: string | null) {
   engine?.registerRequestFilter((type, request) => {
-    if (type === licenseType) request.headers = ensureDrmLicenseContentType(request.headers ?? {});
+    if (type !== licenseType) return;
+    request.headers = ensureDrmLicenseContentType(request.headers ?? {});
+    const trusted = Boolean(request.uris?.length && request.uris.every((uri) => {
+      try { const url = new URL(uri); return url.protocol === "https:" && isNprepSiteHost(url.hostname); } catch { return false; }
+    }));
+    if (token && trusted) request.headers = { ...request.headers, Authorization: `Bearer ${token}` };
   });
+}
+
+/** Preserve signatures on same-host segments without leaking them to license servers. */
+export function signedMediaRequestUrl(uri: string, manifest: string): string {
+  try {
+    const source = normalizeCloudFrontSignedUrl(new URL(manifest));
+    const target = normalizeCloudFrontSignedUrl(new URL(uri));
+    if (target.origin !== source.origin) return uri;
+    for (const [key, value] of source.searchParams) {
+      if (["Policy", "Signature", "Key-Pair-Id", "Expires"].includes(key) && !target.searchParams.has(key)) target.searchParams.append(key, value);
+    }
+    return target.toString();
+  } catch { return uri; }
+}
+
+export function playbackFallbackMode(error: { code?: number }, viaProxy: boolean, resolver: boolean, tried: ReadonlySet<boolean>): boolean | undefined {
+  if (resolver || ![1001, 1002, 1003, 4036].includes(error.code ?? 0) || tried.has(!viaProxy)) return undefined;
+  return !viaProxy;
 }
 
 export function lectureMediaDiagnostics(response: unknown, mediaUrl?: string, licenseUrl?: string, drmType?: string): string {
@@ -158,6 +182,7 @@ export function playbackMessage(error: any, licenseUrl?: string, drmType?: strin
       hostname = new URL(String(data[0] ?? "")).hostname;
     } catch {}
     const rawBody = typeof data[2] === "string" ? data[2] : "";
+    if ([521, 502, 504].includes(status)) return `The video service is temporarily unreachable (HTTP ${status}). Retry playback in a moment or try the other playback connection.`;
     if (status === 403 && /block access from your country/i.test(rawBody)) {
       const region = rawBody.match(/relay region:\s*([a-z0-9-]+)/i)?.[1];
       if (region && region.toLowerCase() !== "bom1") {
