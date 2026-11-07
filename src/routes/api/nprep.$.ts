@@ -26,27 +26,32 @@ async function forward({ request, params }: { request: Request; params: { _splat
   let res: Response | undefined;
   for (let redirects = 0; redirects <= 5; redirects += 1) {
     try {
-      res = await fetch(target, {
-        method,
-        headers,
-        ...(body === undefined ? {} : { body }),
-        redirect: "manual",
-      });
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        res = await fetch(target, {
+          method,
+          headers,
+          ...(body === undefined ? {} : { body }),
+          redirect: "manual",
+        });
+        if (attempt === 1 || ![521, 502, 504].includes(res.status)) break;
+        await res.body?.cancel();
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
     } catch {
       return new Response(JSON.stringify({ message: "NPrep's server could not be reached. Please try again shortly." }), {
         status: 502,
         headers: { "content-type": "application/json" },
       });
     }
+    if (!res) return Response.json({ message: "NPrep's server could not be reached. Please try again shortly." }, { status: 502 });
+    if (res.status === 521) {
+      await res.body?.cancel();
+      return Response.json({ message: "NPrep server is temporarily unreachable (Cloudflare error 521). Please retry in a moment." }, { status: 521 });
+    }
     for (const cookie of localMediaCookies(res.headers, new URL(request.url).protocol === "https:")) {
       const pair = cookie.split(";", 1)[0] ?? "";
       const separator = pair.indexOf("=");
       if (separator > 0) signedCookies.set(pair.slice(0, separator), pair.slice(separator + 1));
-    }
-    if ((params._splat ?? "") === "v3/auth/request-otp" && res.status === 403 && target.hostname === "api.nprep.in") {
-      await res.body?.cancel();
-      target.hostname = "dev-api.nprep.in";
-      continue;
     }
     if ((params._splat ?? "") === "v3/auth/request-otp" && res.status === 403) {
       return new Response(JSON.stringify({ message: "NPrep rejected the OTP request (Forbidden).", upstream: { status: res.status, message: "Forbidden" } }), {

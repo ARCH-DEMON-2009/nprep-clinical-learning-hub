@@ -155,7 +155,9 @@ export function applyNprepClientHeaders(headers: Headers): Headers {
   headers.set("x-app-build", NPREP_APP_BUILD);
   headers.set("x-platform", "android");
   // The app never sends browser headers; NPrep now answers 403 when Origin/Referer are present.
-  for (const name of ["origin", "referer", "sec-fetch-site", "sec-fetch-mode", "sec-fetch-dest"]) headers.delete(name);
+  for (const name of [...headers.keys()]) {
+    if (name === "origin" || name === "referer" || name.startsWith("sec-fetch-")) headers.delete(name);
+  }
   return headers;
 }
 

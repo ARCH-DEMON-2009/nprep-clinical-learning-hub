@@ -47,6 +47,9 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
     window.location.href = "/login";
   }
   if (!res.ok) {
+    if (res.status === 521) {
+      throw new ApiError("NPrep server is temporarily unreachable (Cloudflare error 521). Please retry in a moment.", 521);
+    }
     const m = body?.message;
     if (path === "/auth/request-otp" && res.status === 403) {
       throw new ApiError("NPrep is currently rejecting OTP requests. Please try again later.", res.status);

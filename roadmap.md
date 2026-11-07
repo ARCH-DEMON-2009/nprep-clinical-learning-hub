@@ -1,4 +1,5 @@
 # NPrep playback and question taking
+- [ ] Handle temporary 521/502/504 failures with one retry, remove development API fallback, enforce Android headers, and verify playback retry/credential safety.
 - [x] QBank topic → category → question flow using the app's /qbank/topics, /qbank/category, /qbank/attempt and /qbank/attempt/question paths (88 tests pass; live data unverified).
 - [ ] Save test/QBank attempts and results to the user's database: deferred to a later pass with Tests; needs a results table in the user's database.
 - [x] Rapid Revision 2.0 (edition 53 → course 75) in Home batches and Courses.
