@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { api, firstArray, findKey, idOf, isExpiredSessionResponse, titleOf, unwrap } from "./api";
 
 describe("API client", () => {
+  it.each(["<html>Cloudflare server down</html>", JSON.stringify({ message: "unhelpful upstream error" })])("handles 521 without exposing upstream text", async (body) => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(body, { status: 521 })));
+    await expect(api("/home")).rejects.toMatchObject({ status: 521, message: "NPrep server is temporarily unreachable (Cloudflare error 521). Please retry in a moment." });
+    vi.unstubAllGlobals();
+  });
   it("shows an actionable OTP rejection without exposing raw Forbidden", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ message: "NPrep rejected the OTP request (Forbidden)." }), {
       status: 403,
