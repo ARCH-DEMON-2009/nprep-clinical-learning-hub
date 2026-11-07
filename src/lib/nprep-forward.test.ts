@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { encodeMediaTarget } from "./media-proxy";
+import { applyNprepClientHeaders, encodeMediaTarget } from "./media-proxy";
 
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => options,
@@ -31,6 +31,15 @@ const betaRequest = (path: string, init: RequestInit & { headers?: Record<string
   });
 
 describe("NPrep pass-through uses the accepted origin", () => {
+  it("forces the exact Android app identity and strips every browser fetch header", () => {
+    const headers = applyNprepClientHeaders(new Headers({ origin: "https://nprep.site", referer: "https://nprep.site/", "sec-fetch-user": "?1", "sec-fetch-custom": "value", authorization: "Bearer fixture-only" }));
+    expect(headers.get("user-agent")).toBe("Dart/3.5 (dart:io)");
+    expect(headers.get("x-app-version")).toBe("5.4.2");
+    expect(headers.get("x-app-build")).toBe("608");
+    expect(headers.get("x-platform")).toBe("android");
+    expect([...headers.keys()].filter((name) => name.startsWith("sec-fetch-") || name === "origin" || name === "referer")).toEqual([]);
+    expect(headers.get("authorization")).toBe("Bearer fixture-only");
+  });
   it("sends OTP verification without browser Origin/Referer and an unchanged body", async () => {
     const calls = captureFetch();
     const body = JSON.stringify({ phone_number: "9000000000", otp: "000000" });
