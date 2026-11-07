@@ -31,16 +31,17 @@ async function forward({ request, params }: { request: Request; params: { _splat
       headers.set("user-agent", request.headers.get("user-agent") || "Mozilla/5.0");
     }
     try {
-      for (let attempt = 0; attempt < 2; attempt += 1) {
+      // `body` was buffered above; it is reusable even for POST/login requests.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
         res = await fetch(target, {
           method,
           headers,
           ...(body === undefined ? {} : { body }),
           redirect: "manual",
         });
-        if (attempt === 1 || ![521, 502, 504].includes(res.status)) break;
+        if (attempt === 2 || ![521, 502, 503, 504].includes(res.status)) break;
         await res.body?.cancel();
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, (attempt + 1) * 500));
       }
     } catch {
       return new Response(JSON.stringify({ message: "NPrep's server could not be reached. Please try again shortly." }), {
@@ -52,6 +53,10 @@ async function forward({ request, params }: { request: Request; params: { _splat
     if (res.status === 521) {
       await res.body?.cancel();
       return Response.json({ message: "NPrep server is temporarily unreachable (Cloudflare error 521). Please retry in a moment." }, { status: 521 });
+    }
+    if ([502, 503, 504].includes(res.status)) {
+      await res.body?.cancel();
+      return Response.json({ message: "NPrep is temporarily unavailable. Please try again in a moment." }, { status: res.status });
     }
     for (const cookie of localMediaCookies(res.headers, new URL(request.url).protocol === "https:")) {
       const pair = cookie.split(";", 1)[0] ?? "";
