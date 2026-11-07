@@ -1,8 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { drmKeySystem, ensureDrmLicenseContentType, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "./lecture";
+import { drmKeySystem, ensureDrmLicenseContentType, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage, playbackFallbackMode, signedMediaRequestUrl } from "./lecture";
 import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, embeddedMediaRedirect, encodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, isNprepLinkResolverUrl, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, mediaProxyUrl, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "./media-proxy";
 
 describe("lecture response normalization", () => {
+  it("forwards app bearer only to trusted NPrep license hosts", () => {
+    let filter: ((type: number, request: { headers: Record<string, string>; uris?: string[] }) => void) | undefined;
+    registerLicenseRequestFilter({ registerRequestFilter: (fn) => { filter = fn; } }, 2, "fixture-only");
+    if (!filter) throw new Error("Missing filter");
+    const nprep = { uris: ["https://api.nprep.in/license"], headers: {} };
+    const tpstreams = { uris: ["https://app.tpstreams.com/license?token=service-token"], headers: {} };
+    filter(2, nprep); filter(2, tpstreams);
+    expect(nprep.headers).toEqual({ "Content-Type": "application/octet-stream", Authorization: "Bearer fixture-only" });
+    expect(tpstreams.headers).toEqual({ "Content-Type": "application/octet-stream" });
+  });
+  it("copies CloudFront signatures to same-host segments but not license hosts", () => {
+    const manifest = "https://cdn.cloudfront.net/master.mpd?CloudFront-Policy=p&CloudFront-Signature=s&CloudFront-Key-Pair-Id=k";
+    const segment = new URL(signedMediaRequestUrl("https://cdn.cloudfront.net/segment.m4s", manifest));
+    expect(segment.searchParams.get("Signature")).toBe("s");
+    expect(segment.searchParams.get("Policy")).toBe("p");
+    expect(segment.searchParams.get("Key-Pair-Id")).toBe("k");
+    expect(signedMediaRequestUrl("https://app.tpstreams.com/license", manifest)).toBe("https://app.tpstreams.com/license");
+  });
+  it("allows bounded bidirectional network fallback, never DRM or resolver fallback", () => {
+    expect(playbackFallbackMode({ code: 1002 }, false, false, new Set([false]))).toBe(true);
+    expect(playbackFallbackMode({ code: 1001 }, true, false, new Set([true]))).toBe(false);
+    expect(playbackFallbackMode({ code: 1001 }, true, false, new Set([true, false]))).toBeUndefined();
+    expect(playbackFallbackMode({ code: 6007 }, true, false, new Set([true]))).toBeUndefined();
+    expect(playbackFallbackMode({ code: 1002 }, true, true, new Set([true]))).toBeUndefined();
+  });
+  it("explains temporary video service 521 failures", () => {
+    expect(playbackMessage({ code: 1001, data: ["/api/media/relay/x", 521, "HTML"] })).toContain("temporarily unreachable (HTTP 521)");
+  });
   it("opens a nested video envelope", () => {
     expect(lectureData({ data: { video: { id: 118 } } }).id).toBe(118);
   });

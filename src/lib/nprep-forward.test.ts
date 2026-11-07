@@ -12,7 +12,7 @@ type Handler = (context: { request: Request; params: { _splat: string } }) => Pr
 const nprep = (NprepRoute as unknown as { server: { handlers: { GET: Handler; POST: Handler } } }).server.handlers;
 const media = (MediaRoute as unknown as { server: { handlers: { GET: Handler; POST: Handler } } }).server.handlers;
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 // Mocked network only: no OTP is sent or verified and no session is created.
 function captureFetch() {
@@ -54,7 +54,7 @@ describe("NPrep pass-through uses the accepted origin", () => {
     expect(calls[0]?.body).toBe(body);
   });
 
-  it("falls back to development when the production OTP API returns Forbidden", async () => {
+  it("never falls back to development when the production OTP API returns Forbidden", async () => {
     const calls: URL[] = [];
     vi.stubGlobal("fetch", vi.fn(async (url: URL) => {
       calls.push(new URL(url));
@@ -65,8 +65,8 @@ describe("NPrep pass-through uses the accepted origin", () => {
       request: betaRequest("v3/auth/request-otp", { method: "POST", body: JSON.stringify({ phone_number: "7037917438", country_code: "+91" }), headers: { "content-type": "application/json" } }),
       params: { _splat: "v3/auth/request-otp" },
     });
-    expect(response.status).toBe(200);
-    expect(calls.map((url) => url.hostname)).toEqual(["api.nprep.in", "dev-api.nprep.in"]);
+    expect(response.status).toBe(403);
+    expect(calls.map((url) => url.hostname)).toEqual(["api.nprep.in"]);
   });
 
   it("returns a retryable error when both OTP origins return Forbidden", async () => {
@@ -115,6 +115,36 @@ describe("NPrep pass-through uses the accepted origin", () => {
       params: { _splat: "v3/video" },
     });
     expect(seen.map((h) => h.get("authorization"))).toEqual(["Bearer user-token", "Bearer user-token", null]);
+  });
+});
+
+describe("temporary NPrep failures (mocked network only)", () => {
+  it.each([521, 502, 504])("retries HTTP %s exactly once after 500ms and retains authorization", async (status) => {
+    vi.useFakeTimers();
+    const seen: Headers[] = [];
+    const fetchMock = vi.fn(async (_url: URL, init: RequestInit) => {
+      seen.push(new Headers(init.headers));
+      return seen.length === 1 ? new Response("down", { status }) : Response.json({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const pending = nprep.GET({ request: betaRequest("v3/home", { headers: { authorization: "Bearer fixture-only" } }), params: { _splat: "v3/home" } });
+    await vi.advanceTimersByTimeAsync(499);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect((await pending).status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(seen.map((headers) => headers.get("authorization"))).toEqual(["Bearer fixture-only", "Bearer fixture-only"]);
+  });
+  it("returns structured JSON for persistent 521 rather than upstream HTML", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => new Response("<html>server down</html>", { status: 521 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const pending = nprep.GET({ request: betaRequest("v3/home"), params: { _splat: "v3/home" } });
+    await vi.advanceTimersByTimeAsync(500);
+    const response = await pending;
+    expect(response.status).toBe(521);
+    expect(await response.json()).toEqual({ message: "NPrep server is temporarily unreachable (Cloudflare error 521). Please retry in a moment." });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 

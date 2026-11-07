@@ -100,7 +100,7 @@ function Lecture() {
       if (cancelled) return;
       const fallback = playbackFallbackMode(error, viaProxy, isNprepLinkResolverUrl(mediaSrc ?? ""), triedModesRef.current);
       if (fallback !== undefined) setViaProxy(fallback);
-      else setPlaybackError(error instanceof Error && !error.code ? error.message : playbackMessage(error, license, drmType));
+      else setPlaybackError(error instanceof Error && !("code" in error) ? error.message : playbackMessage(error, license, drmType));
     };
 
     const attach = async () => {
