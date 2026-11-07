@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { api, findKey, setToken, syncSupabaseUser } from "@/lib/api";
+import { api, ApiError, findKey, setToken, syncSupabaseUser } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -24,6 +26,7 @@ function Login() {
   const [timer, setTimer] = useState(0);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [retryAction, setRetryAction] = useState<"request" | "verify" | null>(null);
 
   useEffect(() => {
     if (timer <= 0) return;
@@ -34,16 +37,16 @@ function Login() {
   const valid = /^[6-9]\d{9}$/.test(phone);
 
   async function requestOtp() {
-    setErr(""); setBusy(true);
+    setErr(""); setRetryAction(null); setBusy(true);
     try {
       await api("/auth/request-otp", { method: "POST", body: JSON.stringify({ phone_number: phone, country_code: "+91" }) });
       void syncSupabaseUser(phone, { raw: { otp_requested_at: new Date().toISOString() } }).catch((syncError) => console.error("Could not save mobile number", syncError));
       setStep("otp"); setTimer(45);
-    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+    } catch (e) { setErr((e as Error).message); if (e instanceof ApiError && e.retryable) setRetryAction("request"); } finally { setBusy(false); }
   }
 
   async function verify() {
-    setErr(""); setBusy(true);
+    setErr(""); setRetryAction(null); setBusy(true);
     try {
       const res = await api("/auth/login", { method: "POST", body: JSON.stringify({ phone_number: phone, otp }) });
       const token = findKey(res, /^(access_?token|token|accessToken|jwt)$/i) ?? findKey(res, /token/i);
@@ -51,7 +54,7 @@ function Login() {
       setToken(String(token));
       void syncSupabaseUser(phone, { auth: res, raw: res, authToken: String(token) }).catch((syncError) => console.error("Could not save user data", syncError));
       navigate({ to: "/", replace: true });
-    } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
+    } catch (e) { setErr((e as Error).message); if (e instanceof ApiError && e.retryable) setRetryAction("verify"); } finally { setBusy(false); }
   }
 
   const input = "h-12 w-full rounded-md border border-[#d8dee8] bg-white px-4 text-base text-[#172a4d] outline-none transition placeholder:text-[#97a1b2] focus:border-[#4466ff] focus:ring-2 focus:ring-[#4466ff]/15";
@@ -122,7 +125,10 @@ function Login() {
                   </div>
                 </form>
               )}
-              {err && <p className="mt-5 rounded-md border border-red-100 bg-red-50 px-3 py-3 text-sm text-red-700" role="alert">{err}</p>}
+              {err && <div className="mt-5 space-y-3 rounded-md border border-destructive/20 bg-destructive/5 px-3 py-3 text-sm text-destructive" role="alert">
+                <p>{err}</p>
+                {retryAction && <Button type="button" variant="outline" disabled={busy} onClick={() => { void (retryAction === "verify" ? verify() : requestOtp()); }}><RefreshCw />Retry</Button>}
+              </div>}
               <p className="mt-9 text-center text-xs leading-5 text-[#98a2b3]">By continuing, you agree to NPrep's terms and privacy policy.</p>
             </div>
           </section>

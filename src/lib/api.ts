@@ -22,6 +22,8 @@ export class ApiError extends Error {
   ) {
     super(message);
   }
+
+  get retryable() { return [521, 502, 503, 504].includes(this.status); }
 }
 
 export const isExpiredSessionResponse = (status: number, token: string | null) =>
@@ -29,14 +31,23 @@ export const isExpiredSessionResponse = (status: number, token: string | null) =
 
 export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const res = await fetch(BASE + path, {
+  const headers = new Headers(init.headers);
+  if (!headers.has("content-type")) headers.set("content-type", "application/json");
+  if (token && !headers.has("authorization")) headers.set("authorization", `Bearer ${token}`);
+  // Buffer one-shot streams before sending so every retry has the entire payload.
+  const body = init.body instanceof ReadableStream ? await new Response(init.body).arrayBuffer() : init.body;
+  const options: RequestInit = {
     ...init,
-    headers: {
-      "content-type": "application/json",
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-      ...(init.headers ?? {}),
-    },
-  });
+    headers,
+    body,
+  };
+  let res = await fetch(BASE + path, options);
+  for (let retry = 0; retry < 2 && [521, 502, 503, 504].includes(res.status); retry += 1) {
+    await res.body?.cancel();
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    init.signal?.throwIfAborted();
+    res = await fetch(BASE + path, options);
+  }
   const text = await res.text();
   let body: any = text;
   try {
@@ -49,6 +60,9 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
   if (!res.ok) {
     if (res.status === 521) {
       throw new ApiError("NPrep server is temporarily unreachable (Cloudflare error 521). Please retry in a moment.", 521);
+    }
+    if ([502, 503, 504].includes(res.status)) {
+      throw new ApiError("NPrep is temporarily unavailable. Please try again in a moment.", res.status);
     }
     const m = body?.message;
     if (path === "/auth/request-otp" && res.status === 403) {
