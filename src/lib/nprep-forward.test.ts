@@ -44,8 +44,9 @@ describe("NPrep pass-through uses the accepted origin", () => {
     expect(calls[0]?.headers.get("origin")).toBeNull();
     expect(calls[0]?.headers.get("referer")).toBeNull();
     // NPrep returns 403 to browser agents; it needs the app's agent and a semver x-app-version.
-    expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
+    expect(calls[0]?.headers.get("user-agent")).toBe("Dart/3.5 (dart:io)");
     expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
+    expect(calls[0]?.headers.get("x-platform")).toBe("android");
     expect(calls[0]?.headers.get("sec-fetch-site")).toBeNull();
     expect(calls[0]?.headers.get("sec-fetch-mode")).toBeNull();
     expect(calls[0]?.headers.get("sec-fetch-dest")).toBeNull();
@@ -97,7 +98,7 @@ describe("NPrep pass-through uses the accepted origin", () => {
     expect(calls[0]?.headers.get("origin")).toBeNull();
     expect(calls[0]?.headers.get("referer")).toBeNull();
     expect(calls[0]?.headers.get("authorization")).toBe("Bearer user-token");
-    expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
+    expect(calls[0]?.headers.get("user-agent")).toBe("Dart/3.5 (dart:io)");
     expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
   });
 
@@ -129,7 +130,7 @@ describe("lecture relay uses the accepted origin for NPrep API links", () => {
     expect(calls[0]?.headers.get("origin")).toBeNull();
     expect(calls[0]?.headers.get("referer")).toBeNull();
     expect(calls[0]?.headers.get("authorization")).toBe("Bearer user-token");
-    expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
+    expect(calls[0]?.headers.get("user-agent")).toBe("Dart/3.5 (dart:io)");
     expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
   });
 
