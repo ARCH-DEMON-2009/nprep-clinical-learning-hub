@@ -128,32 +128,63 @@ describe("NPrep pass-through uses the accepted origin", () => {
 });
 
 describe("temporary NPrep failures (mocked network only)", () => {
-  it.each([521, 502, 504])("retries HTTP %s exactly once after 500ms and retains authorization", async (status) => {
+  it.each([521, 502, 503, 504])("makes three attempts for HTTP %s with 500ms then 1000ms delays and retains authorization", async (status) => {
     vi.useFakeTimers();
     const seen: Headers[] = [];
     const fetchMock = vi.fn(async (_url: URL, init: RequestInit) => {
       seen.push(new Headers(init.headers));
-      return seen.length === 1 ? new Response("down", { status }) : Response.json({ ok: true });
+      return seen.length < 3 ? new Response("down", { status }) : Response.json({ ok: true });
     });
     vi.stubGlobal("fetch", fetchMock);
     const pending = nprep.GET({ request: betaRequest("v3/home", { headers: { authorization: "Bearer fixture-only" } }), params: { _splat: "v3/home" } });
     await vi.advanceTimersByTimeAsync(499);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(1);
-    expect((await pending).status).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(seen.map((headers) => headers.get("authorization"))).toEqual(["Bearer fixture-only", "Bearer fixture-only"]);
+    await vi.advanceTimersByTimeAsync(999);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect((await pending).status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(seen.map((headers) => headers.get("authorization"))).toEqual(["Bearer fixture-only", "Bearer fixture-only", "Bearer fixture-only"]);
   });
   it("returns structured JSON for persistent 521 rather than upstream HTML", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn(async () => new Response("<html>server down</html>", { status: 521 }));
     vi.stubGlobal("fetch", fetchMock);
     const pending = nprep.GET({ request: betaRequest("v3/home"), params: { _splat: "v3/home" } });
-    await vi.advanceTimersByTimeAsync(500);
+    await vi.advanceTimersByTimeAsync(1500);
     const response = await pending;
     expect(response.status).toBe(521);
     expect(await response.json()).toEqual({ message: "NPrep server is temporarily unreachable (Cloudflare error 521). Please retry in a moment." });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+  it("buffers the complete login POST stream for all three upstream attempts (mocked only)", async () => {
+    vi.useFakeTimers();
+    const body = JSON.stringify({ phone_number: "9000000000", otp: "000000" });
+    const seen: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: URL, init: RequestInit) => {
+      seen.push(await new Response(init.body).text());
+      return seen.length < 3 ? new Response("down", { status: 503 }) : Response.json({ ok: true });
+    }));
+    const stream = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(body)); controller.close(); } });
+    const request = betaRequest("v3/auth/login", { method: "POST", body: stream, duplex: "half" } as RequestInit);
+    const pending = nprep.POST({ request, params: { _splat: "v3/auth/login" } });
+    await vi.advanceTimersByTimeAsync(1500);
+    expect((await pending).status).toBe(200);
+    expect(seen).toEqual([body, body, body]);
+  });
+  it.each([502, 503, 504])("returns structured JSON after three persistent HTTP %s responses", async (status) => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(async () => new Response("<html>down</html>", { status }));
+    vi.stubGlobal("fetch", fetchMock);
+    const pending = nprep.GET({ request: betaRequest("v3/home"), params: { _splat: "v3/home" } });
+    await vi.advanceTimersByTimeAsync(1500);
+    const response = await pending;
+    expect(response.status).toBe(status);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(await response.json()).toHaveProperty("message");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });
 
