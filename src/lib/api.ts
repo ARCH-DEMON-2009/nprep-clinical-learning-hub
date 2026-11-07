@@ -35,11 +35,11 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
   if (!headers.has("content-type")) headers.set("content-type", "application/json");
   if (token && !headers.has("authorization")) headers.set("authorization", `Bearer ${token}`);
   // Buffer one-shot streams before sending so every retry has the entire payload.
-  const body = init.body instanceof ReadableStream ? await new Response(init.body).arrayBuffer() : init.body;
+  const requestBody = init.body instanceof ReadableStream ? await new Response(init.body).arrayBuffer() : init.body;
   const options: RequestInit = {
     ...init,
     headers,
-    body,
+    ...(requestBody === undefined ? {} : { body: requestBody }),
   };
   let res = await fetch(BASE + path, options);
   for (let retry = 0; retry < 2 && [521, 502, 503, 504].includes(res.status); retry += 1) {

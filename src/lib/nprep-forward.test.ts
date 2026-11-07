@@ -168,7 +168,7 @@ describe("temporary NPrep failures (mocked network only)", () => {
       return seen.length < 3 ? new Response("down", { status: 503 }) : Response.json({ ok: true });
     }));
     const stream = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(body)); controller.close(); } });
-    const request = betaRequest("v3/auth/login", { method: "POST", body: stream, duplex: "half" } as RequestInit);
+    const request = new Request("https://beta.nprep.site/api/nprep/v3/auth/login", { method: "POST", body: stream, duplex: "half" } as RequestInit);
     const pending = nprep.POST({ request, params: { _splat: "v3/auth/login" } });
     await vi.advanceTimersByTimeAsync(1500);
     expect((await pending).status).toBe(200);
