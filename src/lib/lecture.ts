@@ -182,7 +182,7 @@ export function playbackMessage(error: any, licenseUrl?: string, drmType?: strin
       hostname = new URL(String(data[0] ?? "")).hostname;
     } catch {}
     const rawBody = typeof data[2] === "string" ? data[2] : "";
-    if ([521, 502, 504].includes(status)) return `The video service is temporarily unreachable (HTTP ${status}). Retry playback in a moment or try the other playback connection.`;
+    if ([521, 502, 504].includes(status) && !/resolver did not return a media URL/i.test(rawBody)) return `The video service is temporarily unreachable (HTTP ${status}). Retry playback in a moment or try the other playback connection.`;
     if (status === 403 && /block access from your country/i.test(rawBody)) {
       const region = rawBody.match(/relay region:\s*([a-z0-9-]+)/i)?.[1];
       if (region && region.toLowerCase() !== "bom1") {
