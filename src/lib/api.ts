@@ -1,3 +1,5 @@
+import { classifyConnection, reportConnection } from "./connection-status";
+
 const TOKEN_KEY = "nprep_token";
 const BASE = "/api/nprep/v3";
 
@@ -41,12 +43,23 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
     headers,
     ...(requestBody === undefined ? {} : { body: requestBody }),
   };
-  let res = await fetch(BASE + path, options);
+  const send = async () => {
+    try {
+      const response = await fetch(BASE + path, options);
+      reportConnection(classifyConnection(response.status, response.headers.get("x-nprep-response-source")), response.status);
+      return response;
+    } catch (error) {
+      if (!init.signal?.aborted) reportConnection("network");
+      throw error;
+    }
+  };
+  let res = await send();
   for (let retry = 0; retry < 2 && [521, 502, 503, 504].includes(res.status); retry += 1) {
+    reportConnection(classifyConnection(res.status, res.headers.get("x-nprep-response-source")), res.status, true);
     await res.body?.cancel();
     await new Promise((resolve) => setTimeout(resolve, 1000));
     init.signal?.throwIfAborted();
-    res = await fetch(BASE + path, options);
+    res = await send();
   }
   const text = await res.text();
   let body: any = text;
