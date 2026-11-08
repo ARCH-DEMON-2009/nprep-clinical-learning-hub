@@ -1,9 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api, firstArray, findKey, idOf, isExpiredSessionResponse, titleOf, unwrap } from "./api";
+import { getConnectionStatus } from "./connection-status";
 
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); localStorage.clear(); });
 
 describe("API client", () => {
+  it("reports safe upstream diagnostics and clears them after a successful request", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("private response must not enter diagnostics", { status: 500, headers: { "x-nprep-response-source": "upstream" } })));
+    await expect(api("/home")).rejects.toMatchObject({ status: 500 });
+    expect(getConnectionStatus()).toEqual({ kind: "upstream", status: 500, checkedAt: expect.any(Number), retrying: false });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ ok: true }, { headers: { "x-nprep-response-source": "upstream" } })));
+    await api("/home");
+    expect(getConnectionStatus().kind).toBe("connected");
+  });
   it.each(["<html>Cloudflare server down</html>", JSON.stringify({ message: "unhelpful upstream error" })])("handles 521 without exposing upstream text", async (body) => {
     vi.useFakeTimers();
     const fetchMock = vi.fn(async () => new Response(body, { status: 521 }));
