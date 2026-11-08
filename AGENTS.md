@@ -9,6 +9,7 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 - All NPrep backend calls go through the `/api/nprep/*` pass-through route (src/routes/api/nprep.$.ts) via `api()` in src/lib/api.ts — avoids browser CORS; backend must not be modified.
+- API setup is a public, non-secret in-memory draft only; it cannot change the live origin, send credentials, or assert provider approval. Real integration requires independently verified NPrep authorization and its documented web authentication contract.
 - Connection diagnostics use an allowlisted response-source header and an ephemeral category/code/time store only; never retain request details, credentials or raw error text, and never infer an upstream outage from unmarked errors.
 - Requests to api.nprep.in carry no Origin/Referer/sec-fetch headers (the API now 403s them); static tests avoid sending or verifying OTPs.
 - Every server request to api.nprep.in goes through `applyNprepClientHeaders` (Flutter app identity: Dart/ User-Agent, semver x-app-version, x-app-build, x-platform); the API returns 403 before routing/auth to browser agents. CDN requests keep the browser agent.

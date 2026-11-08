@@ -1,4 +1,5 @@
 import { useState, useSyncExternalStore } from "react";
+import { Link } from "@tanstack/react-router";
 import { ChevronDown, ChevronUp, CircleCheck, Wifi, WifiOff } from "lucide-react";
 import { Button } from "./ui/button";
 import { getConnectionStatus, getServerConnectionStatus, subscribeConnectionStatus, type ConnectionKind } from "@/lib/connection-status";
@@ -11,7 +12,7 @@ const descriptions: Record<ConnectionKind, { title: string; detail: string }> = 
   deployment: { title: "Site connection error", detail: "The site's request handler could not complete the request. This does not confirm an NPrep outage." },
   unknown: { title: "Connection error — source unclear", detail: "The response does not identify the failing service. Try again; if it persists, the site connection needs checking." },
   network: { title: "Network connection interrupted", detail: "No server response arrived. Check your internet connection and try the affected action again." },
-  access: { title: "NPrep reachable — access required", detail: "NPrep responded but did not allow this request. Check your sign-in or subscription; this is not an outage." },
+  access: { title: "NPrep request denied", detail: "NPrep did not allow this request. Website approval, sign-in or subscription may be required. This is not an outage, and a response does not prove website approval." },
 };
 
 export function ConnectionStatusPanel() {
@@ -31,6 +32,7 @@ export function ConnectionStatusPanel() {
       </div>
       {expanded && <div id="connection-details" className="mx-auto mt-1 max-w-screen-2xl space-y-1 pb-1 text-muted-foreground">
         <p>{copy.detail}</p>
+        <p>Website access: not approved. <Link to="/api-configuration" className="font-medium text-primary underline">Review API setup</Link></p>
         <p>Last API response{state.status ? `: HTTP ${state.status}` : ": none"}{state.checkedAt ? ` · ${new Date(state.checkedAt).toLocaleTimeString()}` : ""}</p>
       </div>}
     </section>
