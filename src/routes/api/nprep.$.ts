@@ -46,17 +46,17 @@ async function forward({ request, params }: { request: Request; params: { _splat
     } catch {
       return new Response(JSON.stringify({ message: "NPrep's server could not be reached. Please try again shortly." }), {
         status: 502,
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-nprep-response-source": "relay" },
       });
     }
-    if (!res) return Response.json({ message: "NPrep's server could not be reached. Please try again shortly." }, { status: 502 });
+    if (!res) return Response.json({ message: "NPrep's server could not be reached. Please try again shortly." }, { status: 502, headers: { "x-nprep-response-source": "relay" } });
     if (res.status === 521) {
       await res.body?.cancel();
-      return Response.json({ message: "NPrep server is temporarily unreachable (Cloudflare error 521). Please retry in a moment." }, { status: 521 });
+      return Response.json({ message: "NPrep server is temporarily unreachable (Cloudflare error 521). Please retry in a moment." }, { status: 521, headers: { "x-nprep-response-source": "upstream" } });
     }
     if ([502, 503, 504].includes(res.status)) {
       await res.body?.cancel();
-      return Response.json({ message: "NPrep is temporarily unavailable. Please try again in a moment." }, { status: res.status });
+      return Response.json({ message: "NPrep is temporarily unavailable. Please try again in a moment." }, { status: res.status, headers: { "x-nprep-response-source": "upstream" } });
     }
     for (const cookie of localMediaCookies(res.headers, new URL(request.url).protocol === "https:")) {
       const pair = cookie.split(";", 1)[0] ?? "";
@@ -66,17 +66,17 @@ async function forward({ request, params }: { request: Request; params: { _splat
     if ((params._splat ?? "") === "v3/auth/request-otp" && res.status === 403) {
       return new Response(JSON.stringify({ message: "NPrep rejected the OTP request (Forbidden).", upstream: { status: res.status, message: "Forbidden" } }), {
         status: 403,
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", "x-nprep-response-source": "upstream" },
       });
     }
     const location = res.headers.get("location");
     if (![301, 302, 303, 307, 308].includes(res.status) || !location) break;
-    if (redirects === 5) return new Response("Too many NPrep redirects", { status: 502 });
+    if (redirects === 5) return new Response("Too many NPrep redirects", { status: 502, headers: { "x-nprep-response-source": "relay" } });
     await res.body?.cancel();
     const next = new URL(location, target);
     const hostname = next.hostname.toLowerCase();
     const trusted = isNprepSiteHost(hostname) || isAllowedMediaHost(hostname);
-    if (next.protocol !== "https:" || !trusted) return new Response("NPrep redirected to an untrusted media host", { status: 502 });
+    if (next.protocol !== "https:" || !trusted) return new Response("NPrep redirected to an untrusted media host", { status: 502, headers: { "x-nprep-response-source": "relay" } });
     if (!isNprepSiteHost(hostname)) headers.delete("authorization");
     target = next;
     if (res.status === 303 || ([301, 302].includes(res.status) && method === "POST")) {
@@ -85,9 +85,10 @@ async function forward({ request, params }: { request: Request; params: { _splat
       headers.delete("content-type");
     }
   }
-  if (!res) return new Response("NPrep server could not be reached", { status: 502 });
+  if (!res) return new Response("NPrep server could not be reached", { status: 502, headers: { "x-nprep-response-source": "relay" } });
 
   const responseHeaders = new Headers({
+    "x-nprep-response-source": "upstream",
     "content-type": res.headers.get("content-type") ?? "application/json",
   });
   const secure = new URL(request.url).protocol === "https:";
