@@ -12,6 +12,16 @@ function entries(value: any, depth = 0): [string, string][] {
     typeof child === "string" ? [[key, child] as [string, string]] : entries(child, depth + 1));
 }
 
+function findObject(value: any, re: RegExp, depth = 0): any {
+  if (!value || typeof value !== "object" || depth > 6) return undefined;
+  for (const [key, child] of Object.entries(value)) {
+    if (re.test(key) && child && typeof child === "object" && !Array.isArray(child)) return child;
+    const found = findObject(child, re, depth + 1);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 export function lectureMedia(value: any) {
   const fields = entries(value);
   const urls = fields.filter(([, url]) => /^https?:\/\//i.test(url));
@@ -30,9 +40,27 @@ export function lectureMedia(value: any) {
     } catch {}
     return score;
   };
-  const src = [...media].sort((a, b) => scoreMediaUrl(b) - scoreMediaUrl(a))[0]?.[1];
+  let src = [...media].sort((a, b) => scoreMediaUrl(b) - scoreMediaUrl(a))[0]?.[1];
+  // The app sends cloud_front_auth as cookies; browsers can't, so carry them as signed URL params.
+  const cf = findObject(value, /^cloud_?front_?(auth|cookies?)$/i);
+  if (src && cf) {
+    try {
+      const url = new URL(src);
+      const map: [RegExp, string][] = [[/key_?pair_?id/i, "Key-Pair-Id"], [/policy/i, "Policy"], [/signature/i, "Signature"], [/expires/i, "Expires"]];
+      for (const [key, raw] of Object.entries(cf)) {
+        const name = map.find(([re]) => re.test(key))?.[1];
+        if (name && raw != null && !url.searchParams.has(name)) url.searchParams.set(name, String(raw));
+      }
+      src = url.toString();
+    } catch {}
+  }
+  const drm = findObject(value, /^drm$/i);
+  const drmHeaders: Record<string, string> = {};
+  if (drm?.headers && typeof drm.headers === "object") {
+    for (const [k, h] of Object.entries(drm.headers)) if (typeof h === "string" && k.toLowerCase() !== "content-type") drmHeaders[k] = h;
+  }
   let queryLicense: string | undefined;
-  let drmType = fields.find(([key]) => /^drm_?type$/i.test(key))?.[1];
+  let drmType = fields.find(([key]) => /^drm_?type$/i.test(key))?.[1] ?? (typeof drm?.type === "string" ? drm.type : undefined);
   if (src) {
     const params = new URL(src).searchParams;
     queryLicense = [...params.entries()].find(([key]) => key.toLowerCase() === "license_url" || key.toLowerCase() === "licenseurl")?.[1];
@@ -45,6 +73,7 @@ export function lectureMedia(value: any) {
     src,
     license: license ?? queryLicense,
     drmType,
+    drmHeaders: Object.keys(drmHeaders).length ? drmHeaders : undefined,
     notes: [...new Set(urls.filter(([key, url]) => /notes|pdf/i.test(key) || /\.pdf(?:[?#]|$)/i.test(url)).map(([, url]) => url))],
     text: fields.find(([key, content]) => /^(text|content|html|lecture_text|text_content|sk_text)$/i.test(key) && !/^https?:\/\//i.test(content))?.[1],
   };
@@ -63,10 +92,10 @@ export function ensureDrmLicenseContentType(headers: Record<string, string>): Re
   return { ...clean, "Content-Type": "application/octet-stream" };
 }
 
-export function registerLicenseRequestFilter(engine: { registerRequestFilter: (filter: (type: number, request: { headers: Record<string, string>; uris?: string[] }) => void) => void } | null, licenseType: number, token?: string | null) {
+export function registerLicenseRequestFilter(engine: { registerRequestFilter: (filter: (type: number, request: { headers: Record<string, string>; uris?: string[] }) => void) => void } | null, licenseType: number, token?: string | null, extraHeaders: Record<string, string> = {}) {
   engine?.registerRequestFilter((type, request) => {
     if (type !== licenseType) return;
-    request.headers = ensureDrmLicenseContentType(request.headers ?? {});
+    request.headers = ensureDrmLicenseContentType({ ...(request.headers ?? {}), ...extraHeaders });
     const trusted = Boolean(request.uris?.length && request.uris.every((uri) => {
       try { const url = new URL(uri); return url.protocol === "https:" && isNprepSiteHost(url.hostname); } catch { return false; }
     }));

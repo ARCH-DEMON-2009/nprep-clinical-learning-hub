@@ -1,3 +1,4 @@
+import { lectureMedia as lmx, registerLicenseRequestFilter as rlf } from "./lecture";
 import { describe, expect, it } from "vitest";
 import { drmKeySystem, ensureDrmLicenseContentType, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage, playbackFallbackMode, signedMediaRequestUrl } from "./lecture";
 import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, embeddedMediaRedirect, encodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, isNprepLinkResolverUrl, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, mediaProxyUrl, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "./media-proxy";
@@ -239,5 +240,31 @@ describe("TPStreams embed", () => {
   it("uses an NPrep-supplied TPStreams embed link", () => {
     expect(lm({ player_url: "https://app.tpstreams.com/embed/org/abc/?access_token=t" }).embed).toBe("https://app.tpstreams.com/embed/org/abc/?access_token=t");
     expect(lm({ url: "https://x.cloudfront.net/a.mpd" }).embed).toBeUndefined();
+  });
+});
+
+describe("documented lecture payload", () => {
+  const payload = {
+    manifest_url: "https://stream.nprep.com/dash/l1/manifest.mpd",
+    drm: { type: "widevine", license_url: "https://drm-license.nprep.com/v1/acquire?contentId=l1", headers: { "X-Custom-Drm-Auth": "tok" } },
+    cloud_front_auth: { key_pair_id: "KP", policy: "POL", signature: "SIG" },
+  };
+  it("adds cloud_front_auth as signed params", () => {
+    const url = new URL(lmx(payload).src!);
+    expect(url.searchParams.get("Key-Pair-Id")).toBe("KP");
+    expect(url.searchParams.get("Policy")).toBe("POL");
+    expect(url.searchParams.get("Signature")).toBe("SIG");
+  });
+  it("reads nested drm type and headers", () => {
+    const m = lmx(payload);
+    expect(m.drmType).toBe("widevine");
+    expect(m.drmHeaders).toEqual({ "X-Custom-Drm-Auth": "tok" });
+  });
+  it("sends DRM auth header on license requests", () => {
+    let f: any;
+    rlf({ registerRequestFilter: (x) => { f = x; } }, 2, null, { "X-Custom-Drm-Auth": "tok" });
+    const req = { headers: {}, uris: ["https://drm-license.nprep.com/x"] };
+    f(2, req);
+    expect(req.headers).toEqual({ "X-Custom-Drm-Auth": "tok", "Content-Type": "application/octet-stream" });
   });
 });
