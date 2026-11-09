@@ -88,6 +88,9 @@ const LOCK_MESSAGES: Record<string, string> = {
 /** NPrep withholds the video when a lecture is locked; report why instead of trying to play it. */
 export function lectureLock(value: any): string | undefined {
   if (!value || typeof value !== "object") return undefined;
+  // If NPrep sent a playable video anyway, the account is authorized: play it.
+  const media = lectureMedia(value);
+  if (media.src || media.embed) return undefined;
   const reason = typeof value.lock_reason === "string" ? value.lock_reason : undefined;
   if (value.is_accessible !== false && !reason) return undefined;
   if (value.is_comming_soon === true || value.is_coming_soon === true) return LOCK_MESSAGES["COMING_SOON"];

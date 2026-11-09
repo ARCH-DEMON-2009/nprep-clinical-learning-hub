@@ -279,6 +279,10 @@ describe("locked lectures", () => {
     expect(lectureLock(locked)).toMatch(/paid NPrep plan/);
     expect(lectureLock({ is_accessible: true })).toBeUndefined();
   });
+  it("plays a lecture when NPrep sends its video despite a lock flag", async () => {
+    const { lectureLock } = await import("./lecture");
+    expect(lectureLock({ ...locked, video_url: "https://dsj0ye61xl4q1.cloudfront.net/v/manifest.mpd" })).toBeUndefined();
+  });
   it("never uses the share link as the video source", async () => {
     const { lectureMedia } = await import("./lecture");
     expect(lectureMedia(locked).src).toBeUndefined();
