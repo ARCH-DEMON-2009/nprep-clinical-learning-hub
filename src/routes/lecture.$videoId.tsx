@@ -51,7 +51,6 @@ function Lecture() {
   const v = lectureData(q.data);
   const locked = lectureLock(v);
   const media = lectureMedia(v);
-  if (locked) { media.src = undefined; media.embed = undefined; }
   const { embed: tpEmbed, src: mediaSrc, license, drmType, drmHeaders, notes, text } = media;
   const embed = tpEmbed ?? (mediaSrc && /youtube\.com|youtu\.be|vimeo\.com/i.test(mediaSrc) ? mediaSrc : undefined);
   // CloudFront does not send browser CORS headers for these signed DRM manifests.
