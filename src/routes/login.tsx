@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { api, ApiError, findKey, setToken, syncSupabaseUser } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -94,11 +94,6 @@ function Login() {
                 <p className="mt-2 text-sm leading-6 text-[#6b7280]">
                   {step === "phone" ? "Enter your mobile number to continue." : `Enter the OTP sent to +91 ${phone}`}
                 </p>
-              </div>
-              <div className="mt-5 space-y-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
-                <p className="font-semibold text-destructive">Website access not approved</p>
-                <p className="text-muted-foreground">NPrep authorization has not been verified. Do not enter an OTP until access is approved.</p>
-                <Button asChild variant="outline"><Link to="/api-configuration">Review API setup</Link></Button>
               </div>
 
               {step === "phone" ? (

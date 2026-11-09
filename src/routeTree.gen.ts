@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiConfigurationRouteImport } from './routes/api-configuration'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as QbankRouteImport } from './routes/qbank'
@@ -25,11 +24,6 @@ import { Route as ApiUsersSyncRouteImport } from './routes/api/users.sync'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiConfigurationRoute = ApiConfigurationRouteImport.update({
-  id: '/api-configuration',
-  path: '/api-configuration',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -85,7 +79,6 @@ const ApiUsersSyncRoute = ApiUsersSyncRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/api-configuration': typeof ApiConfigurationRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/qbank': typeof QbankRoute
@@ -99,7 +92,6 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/api-configuration': typeof ApiConfigurationRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/qbank': typeof QbankRoute
@@ -114,7 +106,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/api-configuration': typeof ApiConfigurationRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/qbank': typeof QbankRoute
@@ -130,7 +121,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/api-configuration'
     | '/login'
     | '/profile'
     | '/qbank'
@@ -144,7 +134,6 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/api-configuration'
     | '/login'
     | '/profile'
     | '/qbank'
@@ -158,7 +147,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/api-configuration'
     | '/login'
     | '/profile'
     | '/qbank'
@@ -173,7 +161,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApiConfigurationRoute: typeof ApiConfigurationRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   QbankRoute: typeof QbankRoute
@@ -193,13 +180,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api-configuration': {
-      id: '/api-configuration'
-      path: '/api-configuration'
-      fullPath: '/api-configuration'
-      preLoaderRoute: typeof ApiConfigurationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -277,7 +257,6 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApiConfigurationRoute: ApiConfigurationRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   QbankRoute: QbankRoute,

@@ -1,6 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, ClipboardList, LayoutDashboard, Library, LogOut, Menu, Moon, RefreshCw, Settings, Sun, User, X } from "lucide-react";
+import { BookOpen, ClipboardList, LayoutDashboard, Library, LogOut, Menu, Moon, RefreshCw, Sun, User, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { api, ApiError, clearToken, findKey, getToken, syncSupabaseUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,6 @@ const NAV = [
   { to: "/tests", label: "Tests & PYQ", icon: ClipboardList },
   { to: "/qbank", label: "QBank", icon: Library },
   { to: "/profile", label: "Profile", icon: User },
-  { to: "/api-configuration", label: "API setup", icon: Settings },
 ] as const;
 
 export function useMe() {
@@ -31,7 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     const d = localStorage.getItem("theme") === "dark";
     setDark(d);
     document.documentElement.classList.toggle("dark", d);
-    if (!getToken() && path !== "/login" && path !== "/api-configuration") navigate({ to: "/login", replace: true });
+    if (!getToken() && path !== "/login") navigate({ to: "/login", replace: true });
     else setReady(true);
   }, [path, navigate]);
   useEffect(() => setOpen(false), [path]);
