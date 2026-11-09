@@ -8,29 +8,12 @@ vi.mock("@tanstack/react-router", () => ({
 import { Route } from "../routes/api/media.$";
 
 const route = Route as unknown as {
-  server: { handlers: Record<"GET" | "POST", (context: { request: Request; params: { _splat: string } }) => Promise<Response>> };
+  server: { handlers: { GET: (context: { request: Request; params: { _splat: string } }) => Promise<Response> } };
 };
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("media relay credential boundaries (mocked network only)", () => {
-  it("keeps binary license challenges and NPrep bearer authorization intact", async () => {
-    let captured: RequestInit | undefined;
-    vi.stubGlobal("fetch", vi.fn(async (_url: URL, init: RequestInit) => { captured = init; return new Response(new Uint8Array([4, 5])); }));
-    const response = await route.server.handlers.POST({ request: new Request("https://nprep.site/api/media/relay/x", { method: "POST", headers: { authorization: "Bearer fixture-only", "content-type": "application/octet-stream" }, body: new Uint8Array([1, 2, 3]) }), params: { _splat: `relay/${encodeMediaTarget("https://api.nprep.in/license")}` } });
-    expect(response.status).toBe(200);
-    expect(new Headers(captured?.headers).get("authorization")).toBe("Bearer fixture-only");
-    expect(new Headers(captured?.headers).get("content-type")).toBe("application/octet-stream");
-    expect(new Headers(captured?.headers).get("origin")).toBeNull();
-    expect([...new Uint8Array(captured?.body as ArrayBuffer)]).toEqual([1, 2, 3]);
-  });
-  it("does not leak the app bearer to TPStreams licenses", async () => {
-    const headers: Headers[] = [];
-    vi.stubGlobal("fetch", vi.fn(async (_url: URL, init: RequestInit) => { headers.push(new Headers(init.headers)); return new Response("license"); }));
-    await route.server.handlers.POST({ request: new Request("https://nprep.site/api/media/relay/x", { method: "POST", headers: { authorization: "Bearer fixture-only", "content-type": "application/octet-stream" }, body: new Uint8Array([1]) }), params: { _splat: `relay/${encodeMediaTarget("https://app.tpstreams.com/license?token=service-token")}` } });
-    expect(headers[0]?.get("authorization")).toBeNull();
-    expect(headers[0]?.get("content-type")).toBe("application/octet-stream");
-  });
   const context = (target: string) => ({
     request: new Request("https://beta.nprep.site/api/media/relay/x/", {
       headers: {

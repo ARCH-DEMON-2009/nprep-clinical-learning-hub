@@ -1,8 +1,8 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, ClipboardList, LayoutDashboard, Library, LogOut, Menu, Moon, RefreshCw, Sun, User, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { BookOpen, ClipboardList, LayoutDashboard, Library, LogOut, Menu, Moon, Sun, User, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { api, ApiError, clearToken, findKey, getToken, syncSupabaseUser } from "@/lib/api";
+import { api, clearToken, findKey, getToken, syncSupabaseUser } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 
@@ -116,17 +116,7 @@ export function Loading() {
 }
 
 export function ErrorBox({ error }: { error: unknown }) {
-  const queryClient = useQueryClient();
-  const [retrying, setRetrying] = useState(false);
-  const retry = async () => {
-    setRetrying(true);
-    try { await queryClient.refetchQueries({ type: "active", predicate: (query) => query.state.error === error }); }
-    finally { setRetrying(false); }
-  };
-  return <div role="alert" className="space-y-3 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-    <p>{(error as Error)?.message ?? "Something went wrong"}</p>
-    {error instanceof ApiError && error.retryable && <Button variant="outline" disabled={retrying} onClick={() => { void retry(); }}><RefreshCw />{retrying ? "Retrying…" : "Retry"}</Button>}
-  </div>;
+  return <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">{(error as Error)?.message ?? "Something went wrong"}</div>;
 }
 
 export function RawData({ data }: { data: unknown }) {

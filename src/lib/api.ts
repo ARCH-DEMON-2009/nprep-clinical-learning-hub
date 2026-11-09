@@ -1,5 +1,3 @@
-import { classifyConnection, reportConnection } from "./connection-status";
-
 const TOKEN_KEY = "nprep_token";
 const BASE = "/api/nprep/v3";
 
@@ -24,43 +22,21 @@ export class ApiError extends Error {
   ) {
     super(message);
   }
-
-  get retryable() { return [521, 502, 503, 504].includes(this.status); }
 }
 
 export const isExpiredSessionResponse = (status: number, token: string | null) =>
-  !!token && status === 401; // 403 is an access/guard refusal, not an expired session.
+  !!token && (status === 401 || status === 403);
 
 export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const headers = new Headers(init.headers);
-  if (!headers.has("content-type")) headers.set("content-type", "application/json");
-  if (token && !headers.has("authorization")) headers.set("authorization", `Bearer ${token}`);
-  // Buffer one-shot streams before sending so every retry has the entire payload.
-  const requestBody = init.body instanceof ReadableStream ? await new Response(init.body).arrayBuffer() : init.body;
-  const options: RequestInit = {
+  const res = await fetch(BASE + path, {
     ...init,
-    headers,
-    ...(requestBody === undefined ? {} : { body: requestBody }),
-  };
-  const send = async () => {
-    try {
-      const response = await fetch(BASE + path, options);
-      reportConnection(classifyConnection(response.status, response.headers.get("x-nprep-response-source")), response.status);
-      return response;
-    } catch (error) {
-      if (!init.signal?.aborted) reportConnection("network");
-      throw error;
-    }
-  };
-  let res = await send();
-  for (let retry = 0; retry < 2 && [521, 502, 503, 504].includes(res.status); retry += 1) {
-    reportConnection(classifyConnection(res.status, res.headers.get("x-nprep-response-source")), res.status, true);
-    await res.body?.cancel();
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    init.signal?.throwIfAborted();
-    res = await send();
-  }
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...(init.headers ?? {}),
+    },
+  });
   const text = await res.text();
   let body: any = text;
   try {
@@ -71,12 +47,6 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
     window.location.href = "/login";
   }
   if (!res.ok) {
-    if (res.status === 521) {
-      throw new ApiError("NPrep server is temporarily unreachable (Cloudflare error 521). Please retry in a moment.", 521);
-    }
-    if ([502, 503, 504].includes(res.status)) {
-      throw new ApiError("NPrep is temporarily unavailable. Please try again in a moment.", res.status);
-    }
     const m = body?.message;
     if (path === "/auth/request-otp" && res.status === 403) {
       throw new ApiError("NPrep is currently rejecting OTP requests. Please try again later.", res.status);

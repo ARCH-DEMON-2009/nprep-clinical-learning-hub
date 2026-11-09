@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { applyNprepClientHeaders, encodeMediaTarget } from "./media-proxy";
+import { encodeMediaTarget } from "./media-proxy";
 
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: unknown) => options,
@@ -12,7 +12,7 @@ type Handler = (context: { request: Request; params: { _splat: string } }) => Pr
 const nprep = (NprepRoute as unknown as { server: { handlers: { GET: Handler; POST: Handler } } }).server.handlers;
 const media = (MediaRoute as unknown as { server: { handlers: { GET: Handler; POST: Handler } } }).server.handlers;
 
-afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+afterEach(() => vi.unstubAllGlobals());
 
 // Mocked network only: no OTP is sent or verified and no session is created.
 function captureFetch() {
@@ -31,16 +31,7 @@ const betaRequest = (path: string, init: RequestInit & { headers?: Record<string
   });
 
 describe("NPrep pass-through uses the accepted origin", () => {
-  it("forces the exact Android app identity and strips every browser fetch header", () => {
-    const headers = applyNprepClientHeaders(new Headers({ origin: "https://nprep.site", referer: "https://nprep.site/", "sec-fetch-user": "?1", "sec-fetch-custom": "value", authorization: "Bearer fixture-only" }));
-    expect(headers.get("user-agent")).toBe("Dart/3.5 (dart:io)");
-    expect(headers.get("x-app-version")).toBe("5.4.2");
-    expect(headers.get("x-app-build")).toBe("608");
-    expect(headers.get("x-platform")).toBe("android");
-    expect([...headers.keys()].filter((name) => name.startsWith("sec-fetch-") || name === "origin" || name === "referer")).toEqual([]);
-    expect(headers.get("authorization")).toBe("Bearer fixture-only");
-  });
-  it("sends OTP verification without browser Origin/Referer and an unchanged body", async () => {
+  it("sends OTP verification with nprep.in origin and an unchanged body", async () => {
     const calls = captureFetch();
     const body = JSON.stringify({ phone_number: "9000000000", otp: "000000" });
     const response = await nprep.POST({
@@ -50,20 +41,19 @@ describe("NPrep pass-through uses the accepted origin", () => {
     expect(response.status).toBe(200);
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url).toBe("https://api.nprep.in/v3/auth/login");
-    expect(calls[0]?.headers.get("origin")).toBeNull();
-    expect(calls[0]?.headers.get("referer")).toBeNull();
+    expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
+    expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
     // NPrep returns 403 to browser agents; it needs the app's agent and a semver x-app-version.
-    expect(calls[0]?.headers.get("user-agent")).toBe("Dart/3.5 (dart:io)");
+    expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
     expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
-    expect(calls[0]?.headers.get("x-platform")).toBe("android");
-    expect(calls[0]?.headers.get("sec-fetch-site")).toBeNull();
-    expect(calls[0]?.headers.get("sec-fetch-mode")).toBeNull();
-    expect(calls[0]?.headers.get("sec-fetch-dest")).toBeNull();
+    expect(calls[0]?.headers.get("sec-fetch-site")).toBe("cross-site");
+    expect(calls[0]?.headers.get("sec-fetch-mode")).toBe("cors");
+    expect(calls[0]?.headers.get("sec-fetch-dest")).toBe("empty");
     expect(calls[0]?.headers.get("x-requested-with")).toBeNull();
     expect(calls[0]?.body).toBe(body);
   });
 
-  it("never falls back to development when the production OTP API returns Forbidden", async () => {
+  it("falls back to development when the production OTP API returns Forbidden", async () => {
     const calls: URL[] = [];
     vi.stubGlobal("fetch", vi.fn(async (url: URL) => {
       calls.push(new URL(url));
@@ -74,8 +64,8 @@ describe("NPrep pass-through uses the accepted origin", () => {
       request: betaRequest("v3/auth/request-otp", { method: "POST", body: JSON.stringify({ phone_number: "7037917438", country_code: "+91" }), headers: { "content-type": "application/json" } }),
       params: { _splat: "v3/auth/request-otp" },
     });
-    expect(response.status).toBe(403);
-    expect(calls.map((url) => url.hostname)).toEqual(["api.nprep.in"]);
+    expect(response.status).toBe(200);
+    expect(calls.map((url) => url.hostname)).toEqual(["api.nprep.in", "dev-api.nprep.in"]);
   });
 
   it("returns a retryable error when both OTP origins return Forbidden", async () => {
@@ -97,17 +87,17 @@ describe("NPrep pass-through uses the accepted origin", () => {
     ["v3/qbank/subjects", ""],
     ["v3/test", ""],
     ["v3/video", "?videoId=31"],
-  ])("sends %s%s without browser Origin/Referer and the user's bearer token", async (path, query) => {
+  ])("sends %s%s with nprep.in origin and the user's bearer token", async (path, query) => {
     const calls = captureFetch();
     await nprep.GET({
       request: betaRequest(`${path}${query}`, { headers: { authorization: "Bearer user-token" } }),
       params: { _splat: path },
     });
     expect(calls[0]?.url).toBe(`https://api.nprep.in/${path}${query}`);
-    expect(calls[0]?.headers.get("origin")).toBeNull();
-    expect(calls[0]?.headers.get("referer")).toBeNull();
+    expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
+    expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
     expect(calls[0]?.headers.get("authorization")).toBe("Bearer user-token");
-    expect(calls[0]?.headers.get("user-agent")).toBe("Dart/3.5 (dart:io)");
+    expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
     expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
   });
 
@@ -127,69 +117,8 @@ describe("NPrep pass-through uses the accepted origin", () => {
   });
 });
 
-describe("temporary NPrep failures (mocked network only)", () => {
-  it.each([521, 502, 503, 504])("makes three attempts for HTTP %s with 500ms then 1000ms delays and retains authorization", async (status) => {
-    vi.useFakeTimers();
-    const seen: Headers[] = [];
-    const fetchMock = vi.fn(async (_url: URL, init: RequestInit) => {
-      seen.push(new Headers(init.headers));
-      return seen.length < 3 ? new Response("down", { status }) : Response.json({ ok: true });
-    });
-    vi.stubGlobal("fetch", fetchMock);
-    const pending = nprep.GET({ request: betaRequest("v3/home", { headers: { authorization: "Bearer fixture-only" } }), params: { _splat: "v3/home" } });
-    await vi.advanceTimersByTimeAsync(499);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    await vi.advanceTimersByTimeAsync(999);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    await vi.advanceTimersByTimeAsync(1);
-    expect((await pending).status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(seen.map((headers) => headers.get("authorization"))).toEqual(["Bearer fixture-only", "Bearer fixture-only", "Bearer fixture-only"]);
-  });
-  it("returns structured JSON for persistent 521 rather than upstream HTML", async () => {
-    vi.useFakeTimers();
-    const fetchMock = vi.fn(async () => new Response("<html>server down</html>", { status: 521 }));
-    vi.stubGlobal("fetch", fetchMock);
-    const pending = nprep.GET({ request: betaRequest("v3/home"), params: { _splat: "v3/home" } });
-    await vi.advanceTimersByTimeAsync(1500);
-    const response = await pending;
-    expect(response.status).toBe(521);
-    expect(await response.json()).toEqual({ message: "NPrep server is temporarily unreachable (Cloudflare error 521). Please retry in a moment." });
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-  });
-  it("buffers the complete login POST stream for all three upstream attempts (mocked only)", async () => {
-    vi.useFakeTimers();
-    const body = JSON.stringify({ phone_number: "9000000000", otp: "000000" });
-    const seen: string[] = [];
-    vi.stubGlobal("fetch", vi.fn(async (_url: URL, init: RequestInit) => {
-      seen.push(await new Response(init.body).text());
-      return seen.length < 3 ? new Response("down", { status: 503 }) : Response.json({ ok: true });
-    }));
-    const stream = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(body)); controller.close(); } });
-    const request = new Request("https://beta.nprep.site/api/nprep/v3/auth/login", { method: "POST", body: stream, duplex: "half" } as RequestInit);
-    const pending = nprep.POST({ request, params: { _splat: "v3/auth/login" } });
-    await vi.advanceTimersByTimeAsync(1500);
-    expect((await pending).status).toBe(200);
-    expect(seen).toEqual([body, body, body]);
-  });
-  it.each([502, 503, 504])("returns structured JSON after three persistent HTTP %s responses", async (status) => {
-    vi.useFakeTimers();
-    const fetchMock = vi.fn(async () => new Response("<html>down</html>", { status }));
-    vi.stubGlobal("fetch", fetchMock);
-    const pending = nprep.GET({ request: betaRequest("v3/home"), params: { _splat: "v3/home" } });
-    await vi.advanceTimersByTimeAsync(1500);
-    const response = await pending;
-    expect(response.status).toBe(status);
-    expect(response.headers.get("content-type")).toContain("application/json");
-    expect(await response.json()).toHaveProperty("message");
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-  });
-});
-
 describe("lecture relay uses the accepted origin for NPrep API links", () => {
-  it("sends API-hosted lecture links without browser Origin/Referer and the user's bearer token", async () => {
+  it("sends API-hosted lecture links with nprep.in origin and the user's bearer token", async () => {
     const calls = captureFetch();
     await media.GET({
       request: new Request("https://beta.nprep.site/api/media/relay/x/", {
@@ -197,10 +126,10 @@ describe("lecture relay uses the accepted origin for NPrep API links", () => {
       }),
       params: { _splat: `relay/${encodeMediaTarget("https://api.nprep.in/v3/video/stream?videoId=31")}` },
     });
-    expect(calls[0]?.headers.get("origin")).toBeNull();
-    expect(calls[0]?.headers.get("referer")).toBeNull();
+    expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
+    expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
     expect(calls[0]?.headers.get("authorization")).toBe("Bearer user-token");
-    expect(calls[0]?.headers.get("user-agent")).toBe("Dart/3.5 (dart:io)");
+    expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
     expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
   });
 

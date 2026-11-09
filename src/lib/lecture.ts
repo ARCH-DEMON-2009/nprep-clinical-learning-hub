@@ -1,5 +1,4 @@
 import { unwrap } from "./api";
-import { isNprepSiteHost, normalizeCloudFrontSignedUrl } from "./media-proxy";
 
 export function lectureData(response: unknown): any {
   const root = unwrap(response);
@@ -12,22 +11,11 @@ function entries(value: any, depth = 0): [string, string][] {
     typeof child === "string" ? [[key, child] as [string, string]] : entries(child, depth + 1));
 }
 
-function findObject(value: any, re: RegExp, depth = 0): any {
-  if (!value || typeof value !== "object" || depth > 6) return undefined;
-  for (const [key, child] of Object.entries(value)) {
-    if (re.test(key) && child && typeof child === "object" && !Array.isArray(child)) return child;
-    const found = findObject(child, re, depth + 1);
-    if (found) return found;
-  }
-  return undefined;
-}
-
 export function lectureMedia(value: any) {
   const fields = entries(value);
   const urls = fields.filter(([, url]) => /^https?:\/\//i.test(url));
   const license = urls.find(([key]) => /license_?url|license_?server|widevine/i.test(key))?.[1];
-  // Share links (links.nprep.in) open the app store page, not a video stream.
-  const media = urls.filter(([key, url]) => !/license|notes|pdf|image|thumb|poster|share|avatar|logo/i.test(key) && !/^https:\/\/links\.nprep\.in\//i.test(url));
+  const media = urls.filter(([key]) => !/license|notes|pdf|image|thumbnail|poster/i.test(key));
   const scoreMediaUrl = ([key, url]: [string, string]) => {
     let score = /^(video_?url|stream_?url|playback_?url|manifest_?url)$/i.test(key) ? 30 : 0;
     if (/\.(mpd|m3u8|mp4|webm)(?:[?#]|$)/i.test(url)) score += 20;
@@ -41,60 +29,21 @@ export function lectureMedia(value: any) {
     } catch {}
     return score;
   };
-  let src = [...media].sort((a, b) => scoreMediaUrl(b) - scoreMediaUrl(a))[0]?.[1];
-  // The app sends cloud_front_auth as cookies; browsers can't, so carry them as signed URL params.
-  const cf = findObject(value, /^cloud_?front_?(auth|cookies?)$/i);
-  if (src && cf) {
-    try {
-      const url = new URL(src);
-      const map: [RegExp, string][] = [[/key_?pair_?id/i, "Key-Pair-Id"], [/policy/i, "Policy"], [/signature/i, "Signature"], [/expires/i, "Expires"]];
-      for (const [key, raw] of Object.entries(cf)) {
-        const name = map.find(([re]) => re.test(key))?.[1];
-        if (name && raw != null && !url.searchParams.has(name)) url.searchParams.set(name, String(raw));
-      }
-      src = url.toString();
-    } catch {}
-  }
-  const drm = findObject(value, /^drm$/i);
-  const drmHeaders: Record<string, string> = {};
-  if (drm?.headers && typeof drm.headers === "object") {
-    for (const [k, h] of Object.entries(drm.headers)) if (typeof h === "string" && k.toLowerCase() !== "content-type") drmHeaders[k] = h;
-  }
+  const src = [...media].sort((a, b) => scoreMediaUrl(b) - scoreMediaUrl(a))[0]?.[1];
   let queryLicense: string | undefined;
-  let drmType = fields.find(([key]) => /^drm_?type$/i.test(key))?.[1] ?? (typeof drm?.type === "string" ? drm.type : undefined);
+  let drmType = fields.find(([key]) => /^drm_?type$/i.test(key))?.[1];
   if (src) {
     const params = new URL(src).searchParams;
     queryLicense = [...params.entries()].find(([key]) => key.toLowerCase() === "license_url" || key.toLowerCase() === "licenseurl")?.[1];
     drmType ??= [...params.entries()].find(([key]) => key.toLowerCase() === "drm_type" || key.toLowerCase() === "drmtype")?.[1];
   }
-  // TPStreams player links supplied by NPrep play on the service's own authorized page.
-  const embed = urls.find(([, url]) => /^https:\/\/(?:app\.)?tpstreams\.com\/embed\//i.test(url))?.[1];
   return {
-    embed,
     src,
     license: license ?? queryLicense,
     drmType,
-    drmHeaders: Object.keys(drmHeaders).length ? drmHeaders : undefined,
     notes: [...new Set(urls.filter(([key, url]) => /notes|pdf/i.test(key) || /\.pdf(?:[?#]|$)/i.test(url)).map(([, url]) => url))],
     text: fields.find(([key, content]) => /^(text|content|html|lecture_text|text_content|sk_text)$/i.test(key) && !/^https?:\/\//i.test(content))?.[1],
   };
-}
-
-const LOCK_MESSAGES: Record<string, string> = {
-  SUBSCRIPTION_ACCESS_DENIED: "This lecture is part of a paid NPrep plan that your account doesn't have. Free lectures in this course will still play.",
-  COMING_SOON: "This lecture hasn't been released yet.",
-};
-
-/** NPrep withholds the video when a lecture is locked; report why instead of trying to play it. */
-export function lectureLock(value: any): string | undefined {
-  if (!value || typeof value !== "object") return undefined;
-  // If NPrep sent a playable video anyway, the account is authorized: play it.
-  const media = lectureMedia(value);
-  if (media.src || media.embed) return undefined;
-  const reason = typeof value.lock_reason === "string" ? value.lock_reason : undefined;
-  if (value.is_accessible !== false && !reason) return undefined;
-  if (value.is_comming_soon === true || value.is_coming_soon === true) return LOCK_MESSAGES["COMING_SOON"];
-  return (reason && LOCK_MESSAGES[reason.toUpperCase()]) ?? "NPrep has locked this lecture for your account.";
 }
 
 export function drmKeySystem(drmType?: string): string {
@@ -110,33 +59,10 @@ export function ensureDrmLicenseContentType(headers: Record<string, string>): Re
   return { ...clean, "Content-Type": "application/octet-stream" };
 }
 
-export function registerLicenseRequestFilter(engine: { registerRequestFilter: (filter: (type: number, request: { headers: Record<string, string>; uris?: string[] }) => void) => void } | null, licenseType: number, token?: string | null, extraHeaders: Record<string, string> = {}) {
+export function registerLicenseRequestFilter(engine: { registerRequestFilter: (filter: (type: number, request: { headers: Record<string, string> }) => void) => void } | null, licenseType: number) {
   engine?.registerRequestFilter((type, request) => {
-    if (type !== licenseType) return;
-    request.headers = ensureDrmLicenseContentType({ ...(request.headers ?? {}), ...extraHeaders });
-    const trusted = Boolean(request.uris?.length && request.uris.every((uri) => {
-      try { const url = new URL(uri); return url.protocol === "https:" && isNprepSiteHost(url.hostname); } catch { return false; }
-    }));
-    if (token && trusted) request.headers = { ...request.headers, Authorization: `Bearer ${token}` };
+    if (type === licenseType) request.headers = ensureDrmLicenseContentType(request.headers ?? {});
   });
-}
-
-/** Preserve signatures on same-host segments without leaking them to license servers. */
-export function signedMediaRequestUrl(uri: string, manifest: string): string {
-  try {
-    const source = normalizeCloudFrontSignedUrl(new URL(manifest));
-    const target = normalizeCloudFrontSignedUrl(new URL(uri));
-    if (target.origin !== source.origin) return uri;
-    for (const [key, value] of source.searchParams) {
-      if (["Policy", "Signature", "Key-Pair-Id", "Expires"].includes(key) && !target.searchParams.has(key)) target.searchParams.append(key, value);
-    }
-    return target.toString();
-  } catch { return uri; }
-}
-
-export function playbackFallbackMode(error: { code?: number }, viaProxy: boolean, resolver: boolean, tried: ReadonlySet<boolean>): boolean | undefined {
-  if (resolver || ![1001, 1002, 1003, 4036].includes(error.code ?? 0) || tried.has(!viaProxy)) return undefined;
-  return !viaProxy;
 }
 
 export function lectureMediaDiagnostics(response: unknown, mediaUrl?: string, licenseUrl?: string, drmType?: string): string {
@@ -229,7 +155,6 @@ export function playbackMessage(error: any, licenseUrl?: string, drmType?: strin
       hostname = new URL(String(data[0] ?? "")).hostname;
     } catch {}
     const rawBody = typeof data[2] === "string" ? data[2] : "";
-    if ([521, 502, 504].includes(status) && !/resolver did not return a media URL/i.test(rawBody)) return `The video service is temporarily unreachable (HTTP ${status}). Retry playback in a moment or try the other playback connection.`;
     if (status === 403 && /block access from your country/i.test(rawBody)) {
       const region = rawBody.match(/relay region:\s*([a-z0-9-]+)/i)?.[1];
       if (region && region.toLowerCase() !== "bom1") {

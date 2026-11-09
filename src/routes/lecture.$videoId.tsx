@@ -1,10 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Download, ExternalLink, FileText, Lock, Maximize, RotateCcw, RotateCw, SkipForward } from "lucide-react";
+import { CheckCircle2, Download, ExternalLink, FileText, Maximize, RotateCcw, RotateCw, SkipForward } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ErrorBox, Loading } from "@/components/AppShell";
 import { api, findArrays, findKey, getToken, imageOf, titleOf } from "@/lib/api";
-import { drmKeySystem, lectureLock, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage, playbackFallbackMode, signedMediaRequestUrl } from "@/lib/lecture";
+import { drmKeySystem, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "@/lib/lecture";
 import { isNprepLinkResolverUrl, mediaProxyUrl, normalizeCloudFrontSignedUrl } from "@/lib/media-proxy";
 
 /** CloudFront only reads Policy/Signature/Key-Pair-Id in the query string. */
@@ -49,19 +49,15 @@ function Lecture() {
   const { videoId } = Route.useParams();
   const q = useQuery({ queryKey: ["video", videoId], queryFn: () => api(`/video?videoId=${videoId}`) });
   const v = lectureData(q.data);
-  const locked = lectureLock(v);
-  const media = lectureMedia(v);
-  const { embed: tpEmbed, src: mediaSrc, license, drmType, drmHeaders, notes, text } = media;
-  const embed = tpEmbed ?? (mediaSrc && /youtube\.com|youtu\.be|vimeo\.com/i.test(mediaSrc) ? mediaSrc : undefined);
+  const { src: mediaSrc, license, drmType, notes, text } = lectureMedia(v);
+  const embed = mediaSrc && /youtube\.com|youtu\.be|vimeo\.com/i.test(mediaSrc) ? mediaSrc : undefined;
   // CloudFront does not send browser CORS headers for these signed DRM manifests.
   // Route them through the relay from the first request; native MP4 playback remains direct.
   const isCloudFrontMedia = Boolean(mediaSrc && /cloudfront\.net/i.test(mediaSrc));
   const [viaProxy, setViaProxy] = useState(() => isNprepLinkResolverUrl(mediaSrc ?? "") || isCloudFrontMedia);
-  const triedModesRef = useRef(new Set<boolean>());
   useEffect(() => {
-    triedModesRef.current.clear();
-    setViaProxy(isNprepLinkResolverUrl(mediaSrc ?? "") || isCloudFrontMedia);
-  }, [videoId, mediaSrc, isCloudFrontMedia]);
+    if (isNprepLinkResolverUrl(mediaSrc ?? "") || isCloudFrontMedia) setViaProxy(true);
+  }, [mediaSrc, isCloudFrontMedia]);
   const src = embed || !mediaSrc ? undefined : viaProxy ? mediaProxyUrl(mediaSrc) : signedDirectUrl(mediaSrc);
 
   const stamps: any[] = Array.isArray(v?.stamps) ? v.stamps
@@ -96,23 +92,15 @@ function Lecture() {
     if (!el || !src) return;
     let cancelled = false;
     let shakaPlayer: any;
-    triedModesRef.current.add(viaProxy);
     setPlaybackError(""); setTime(0); setDuration(0); setSpeed(1);
-    const handleFailure = (error: any) => {
-      if (cancelled) return;
-      const fallback = playbackFallbackMode(error, viaProxy, isNprepLinkResolverUrl(mediaSrc ?? ""), triedModesRef.current);
-      if (fallback !== undefined) setViaProxy(fallback);
-      else setPlaybackError(error instanceof Error && !("code" in error) ? error.message : playbackMessage(error, license, drmType));
-    };
 
     const attach = async () => {
       try {
         const token = getToken();
-        if (token && viaProxy) {
+        if (token) {
           const session = await fetch("/api/media/session", { method: "POST", headers: { authorization: `Bearer ${token}` } });
           if (!session.ok) throw new Error("Could not authorize lecture playback");
         }
-        if (cancelled) return;
         if (/\.(mp4|webm)(?:[?#]|$)/i.test(mediaSrc ?? "") && !license) {
           el.src = src;
           el.load();
@@ -125,13 +113,7 @@ function Lecture() {
         shakaPlayer = new shaka.Player();
         playerRef.current = shakaPlayer;
         await shakaPlayer.attach(el);
-        if (cancelled) return;
-        const engine = shakaPlayer.getNetworkingEngine();
-        const licenseType = shaka.net.NetworkingEngine.RequestType.LICENSE;
-        registerLicenseRequestFilter(engine, licenseType, token, drmHeaders);
-        if (!viaProxy && mediaSrc) engine?.registerRequestFilter((type: number, request: { uris: string[] }) => {
-          if (type !== licenseType) request.uris = request.uris.map((uri) => signedMediaRequestUrl(uri, mediaSrc));
-        });
+        registerLicenseRequestFilter(shakaPlayer.getNetworkingEngine(), shaka.net.NetworkingEngine.RequestType.LICENSE);
         shakaPlayer.addEventListener("error", (event: any) => {
           if (cancelled) return;
           const error = event.detail;
@@ -143,7 +125,8 @@ function Lecture() {
               if (refreshed && refreshed !== mediaSrc) setAttempt((value) => value + 1);
             });
           }
-          handleFailure(error);
+          if (!viaProxy && error?.code === 1002) setViaProxy(true);
+          else setPlaybackError(playbackMessage(error, license, drmType));
         });
         if (license) {
           const keySystem = drmKeySystem(drmType);
@@ -163,22 +146,22 @@ function Lecture() {
         }
         await shakaPlayer.load(src);
       } catch (error: any) {
-        handleFailure(error);
+        if (!cancelled) {
+          if (!viaProxy && error?.code === 1002) setViaProxy(true);
+          else setPlaybackError(playbackMessage(error, license, drmType));
+        }
       }
     };
     void attach();
 
     const onTime = () => setTime(el.currentTime);
     const onDuration = () => setDuration(el.duration);
-    const onNativeError = () => { if (!shakaPlayer) handleFailure({ code: 1002 }); };
-    el.addEventListener("error", onNativeError);
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("durationchange", onDuration);
     return () => {
       cancelled = true;
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("durationchange", onDuration);
-      el.removeEventListener("error", onNativeError);
       void shakaPlayer?.destroy();
       playerRef.current = null;
       el.pause(); el.removeAttribute("src"); el.load();
@@ -219,11 +202,6 @@ function Lecture() {
           <div className={text && !src && !embed ? "p-6 text-background" : "aspect-video"}>
             {src ? <video ref={videoRef} controls playsInline poster={imageOf(v)} className="h-full w-full bg-foreground" />
               : embed ? <iframe src={embed} className="h-full w-full" allow="autoplay; fullscreen" allowFullScreen title="Lecture" />
-              : locked ? <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-background">
-                  <Lock className="h-8 w-8" aria-hidden />
-                  <p className="font-semibold">Lecture locked</p>
-                  <p className="max-w-md text-sm text-background/80">{locked}</p>
-                </div>
               : text ? <article className="space-y-3 break-words" dangerouslySetInnerHTML={{ __html: safeText }} />
               : <div className="flex h-full items-center justify-center text-background">Video not available</div>}
           </div>
@@ -264,8 +242,8 @@ function Lecture() {
             <summary className="cursor-pointer font-medium">Playback diagnostics (redacted)</summary>
             <pre className="mt-2 whitespace-pre-wrap break-words font-mono">{lectureMediaDiagnostics(q.data, mediaSrc, license, drmType)}</pre>
           </details>
-          <Button variant="outline" onClick={async () => { triedModesRef.current.clear(); await q.refetch(); setAttempt((n) => n + 1); }}>Retry playback</Button>
-          {!isNprepLinkResolverUrl(mediaSrc ?? "") && <Button variant="ghost" className="ml-2" onClick={() => setViaProxy(!viaProxy)}>{viaProxy ? "Try direct playback" : "Try via server"}</Button>}
+          <Button variant="outline" onClick={async () => { await q.refetch(); setViaProxy(false); setAttempt((n) => n + 1); }}>Retry playback</Button>
+          {!viaProxy && <Button variant="ghost" className="ml-2" onClick={() => setViaProxy(true)}>Try via server</Button>}
         </div>}
 
         <div className="flex flex-wrap items-start justify-between gap-3">

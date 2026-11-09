@@ -1,37 +1,8 @@
-import { lectureMedia as lmx, registerLicenseRequestFilter as rlf } from "./lecture";
 import { describe, expect, it } from "vitest";
-import { drmKeySystem, ensureDrmLicenseContentType, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage, playbackFallbackMode, signedMediaRequestUrl } from "./lecture";
+import { drmKeySystem, ensureDrmLicenseContentType, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage } from "./lecture";
 import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, embeddedMediaRedirect, encodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, isNprepLinkResolverUrl, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, mediaProxyUrl, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "./media-proxy";
 
 describe("lecture response normalization", () => {
-  it("forwards app bearer only to trusted NPrep license hosts", () => {
-    let filter: ((type: number, request: { headers: Record<string, string>; uris?: string[] }) => void) | undefined;
-    registerLicenseRequestFilter({ registerRequestFilter: (fn) => { filter = fn; } }, 2, "fixture-only");
-    if (!filter) throw new Error("Missing filter");
-    const nprep = { uris: ["https://api.nprep.in/license"], headers: {} };
-    const tpstreams = { uris: ["https://app.tpstreams.com/license?token=service-token"], headers: {} };
-    filter(2, nprep); filter(2, tpstreams);
-    expect(nprep.headers).toEqual({ "Content-Type": "application/octet-stream", Authorization: "Bearer fixture-only" });
-    expect(tpstreams.headers).toEqual({ "Content-Type": "application/octet-stream" });
-  });
-  it("copies CloudFront signatures to same-host segments but not license hosts", () => {
-    const manifest = "https://cdn.cloudfront.net/master.mpd?CloudFront-Policy=p&CloudFront-Signature=s&CloudFront-Key-Pair-Id=k";
-    const segment = new URL(signedMediaRequestUrl("https://cdn.cloudfront.net/segment.m4s", manifest));
-    expect(segment.searchParams.get("Signature")).toBe("s");
-    expect(segment.searchParams.get("Policy")).toBe("p");
-    expect(segment.searchParams.get("Key-Pair-Id")).toBe("k");
-    expect(signedMediaRequestUrl("https://app.tpstreams.com/license", manifest)).toBe("https://app.tpstreams.com/license");
-  });
-  it("allows bounded bidirectional network fallback, never DRM or resolver fallback", () => {
-    expect(playbackFallbackMode({ code: 1002 }, false, false, new Set([false]))).toBe(true);
-    expect(playbackFallbackMode({ code: 1001 }, true, false, new Set([true]))).toBe(false);
-    expect(playbackFallbackMode({ code: 1001 }, true, false, new Set([true, false]))).toBeUndefined();
-    expect(playbackFallbackMode({ code: 6007 }, true, false, new Set([true]))).toBeUndefined();
-    expect(playbackFallbackMode({ code: 1002 }, true, true, new Set([true]))).toBeUndefined();
-  });
-  it("explains temporary video service 521 failures", () => {
-    expect(playbackMessage({ code: 1001, data: ["/api/media/relay/x", 521, "HTML"] })).toContain("temporarily unreachable (HTTP 521)");
-  });
   it("opens a nested video envelope", () => {
     expect(lectureData({ data: { video: { id: 118 } } }).id).toBe(118);
   });
@@ -233,58 +204,5 @@ describe("geo-blocked relay diagnostics", () => {
   it("falls back to the VPN hint when the relay already runs in Mumbai", () => {
     const msg = playbackMessage({ code: 1001, data: ["https://x/", 403, "relay region: bom1. configured to block access from your country."] });
     expect(msg).toContain("Turn off any VPN");
-  });
-});
-import { lectureMedia as lm } from "./lecture";
-describe("TPStreams embed", () => {
-  it("uses an NPrep-supplied TPStreams embed link", () => {
-    expect(lm({ player_url: "https://app.tpstreams.com/embed/org/abc/?access_token=t" }).embed).toBe("https://app.tpstreams.com/embed/org/abc/?access_token=t");
-    expect(lm({ url: "https://x.cloudfront.net/a.mpd" }).embed).toBeUndefined();
-  });
-});
-
-describe("documented lecture payload", () => {
-  const payload = {
-    manifest_url: "https://stream.nprep.com/dash/l1/manifest.mpd",
-    drm: { type: "widevine", license_url: "https://drm-license.nprep.com/v1/acquire?contentId=l1", headers: { "X-Custom-Drm-Auth": "tok" } },
-    cloud_front_auth: { key_pair_id: "KP", policy: "POL", signature: "SIG" },
-  };
-  it("adds cloud_front_auth as signed params", () => {
-    const url = new URL(lmx(payload).src!);
-    expect(url.searchParams.get("Key-Pair-Id")).toBe("KP");
-    expect(url.searchParams.get("Policy")).toBe("POL");
-    expect(url.searchParams.get("Signature")).toBe("SIG");
-  });
-  it("reads nested drm type and headers", () => {
-    const m = lmx(payload);
-    expect(m.drmType).toBe("widevine");
-    expect(m.drmHeaders).toEqual({ "X-Custom-Drm-Auth": "tok" });
-  });
-  it("sends DRM auth header on license requests", () => {
-    let f: any;
-    rlf({ registerRequestFilter: (x) => { f = x; } }, 2, null, { "X-Custom-Drm-Auth": "tok" });
-    const req = { headers: {}, uris: ["https://drm-license.nprep.com/x"] };
-    f(2, req);
-    expect(req.headers).toEqual({ "X-Custom-Drm-Auth": "tok", "Content-Type": "application/octet-stream" });
-  });
-});
-
-describe("locked lectures", () => {
-  const locked = {
-    id: "Rlnx1TNI-fnchgUuIJAIR", is_accessible: false, lock_reason: "SUBSCRIPTION_ACCESS_DENIED",
-    share_link: "https://links.nprep.in/xPrcKAH4b4b",
-  };
-  it("reports a subscription lock", async () => {
-    const { lectureLock } = await import("./lecture");
-    expect(lectureLock(locked)).toMatch(/paid NPrep plan/);
-    expect(lectureLock({ is_accessible: true })).toBeUndefined();
-  });
-  it("plays a lecture when NPrep sends its video despite a lock flag", async () => {
-    const { lectureLock } = await import("./lecture");
-    expect(lectureLock({ ...locked, video_url: "https://dsj0ye61xl4q1.cloudfront.net/v/manifest.mpd" })).toBeUndefined();
-  });
-  it("never uses the share link as the video source", async () => {
-    const { lectureMedia } = await import("./lecture");
-    expect(lectureMedia(locked).src).toBeUndefined();
   });
 });

@@ -138,26 +138,17 @@ export function nprepApiOrigin(request: Request, path: string): string {
   return nprepSiteOrigin(request.url, request.headers.get("origin"), request.headers.get("referer"));
 }
 
-/** Version of the uploaded NPrep Android app (versionName/versionCode in its manifest). */
+/** Version of the uploaded NPrep Android app (versionName in its manifest). */
 export const NPREP_APP_VERSION = "5.4.2";
-export const NPREP_APP_BUILD = "608";
-/** The Flutter app's HTTP client agent; NPrep began refusing the earlier `NPrep/` agent. */
-export const NPREP_USER_AGENT = "Dart/3.5 (dart:io)";
 
 /**
  * NPrep's API answers 403 before routing/auth unless the caller identifies as the
- * NPrep app: a semver `x-app-version` plus the app's `Dart/` User-Agent and platform headers.
+ * NPrep app: a semver `x-app-version` plus an `NPrep/` (or `Dart/`) User-Agent.
  * Browser, curl and okhttp agents are refused. Sign-in is still enforced (401).
  */
 export function applyNprepClientHeaders(headers: Headers): Headers {
-  headers.set("user-agent", NPREP_USER_AGENT);
+  headers.set("user-agent", `NPrep/${NPREP_APP_VERSION}`);
   headers.set("x-app-version", NPREP_APP_VERSION);
-  headers.set("x-app-build", NPREP_APP_BUILD);
-  headers.set("x-platform", "android");
-  // The app never sends browser headers; NPrep now answers 403 when Origin/Referer are present.
-  for (const name of [...headers.keys()]) {
-    if (name === "origin" || name === "referer" || name.startsWith("sec-fetch-")) headers.delete(name);
-  }
   return headers;
 }
 

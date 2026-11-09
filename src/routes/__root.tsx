@@ -11,7 +11,6 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import { AppShell } from "@/components/AppShell";
-import { ConnectionStatusPanel } from "@/components/ConnectionStatus";
 import appCss from "../styles.css?url";
 import { reportAppError } from "../lib/error-reporting";
 
@@ -121,7 +120,6 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ConnectionStatusPanel />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <AppShell>
         <Outlet />
