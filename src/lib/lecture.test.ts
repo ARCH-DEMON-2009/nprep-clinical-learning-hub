@@ -1,3 +1,4 @@
+import { lectureMedia as lm, registerLicenseRequestFilter as rlf } from "./lecture";
 import { describe, expect, it } from "vitest";
 import { drmKeySystem, ensureDrmLicenseContentType, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage, playbackFallbackMode, signedMediaRequestUrl } from "./lecture";
 import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, embeddedMediaRedirect, encodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, isNprepLinkResolverUrl, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, mediaProxyUrl, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "./media-proxy";
@@ -242,7 +243,6 @@ describe("TPStreams embed", () => {
   });
 });
 
-import { lectureMedia as lm, registerLicenseRequestFilter as rlf } from "./lecture";
 describe("documented lecture payload", () => {
   const payload = {
     manifest_url: "https://stream.nprep.com/dash/l1/manifest.mpd",
