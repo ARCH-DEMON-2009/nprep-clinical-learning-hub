@@ -4,7 +4,7 @@ import { CheckCircle2, Download, ExternalLink, FileText, Maximize, RotateCcw, Ro
 import { useEffect, useRef, useState } from "react";
 import { ErrorBox, Loading } from "@/components/AppShell";
 import { api, findArrays, findKey, getToken, imageOf, titleOf } from "@/lib/api";
-import { drmKeySystem, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage, playbackFallbackMode, signedMediaRequestUrl } from "@/lib/lecture";
+import { drmKeySystem, lectureLock, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage, playbackFallbackMode, signedMediaRequestUrl } from "@/lib/lecture";
 import { isNprepLinkResolverUrl, mediaProxyUrl, normalizeCloudFrontSignedUrl } from "@/lib/media-proxy";
 
 /** CloudFront only reads Policy/Signature/Key-Pair-Id in the query string. */
@@ -49,7 +49,10 @@ function Lecture() {
   const { videoId } = Route.useParams();
   const q = useQuery({ queryKey: ["video", videoId], queryFn: () => api(`/video?videoId=${videoId}`) });
   const v = lectureData(q.data);
-  const { embed: tpEmbed, src: mediaSrc, license, drmType, drmHeaders, notes, text } = lectureMedia(v);
+  const locked = lectureLock(v);
+  const media = lectureMedia(v);
+  if (locked) { media.src = undefined; media.embed = undefined; }
+  const { embed: tpEmbed, src: mediaSrc, license, drmType, drmHeaders, notes, text } = media;
   const embed = tpEmbed ?? (mediaSrc && /youtube\.com|youtu\.be|vimeo\.com/i.test(mediaSrc) ? mediaSrc : undefined);
   // CloudFront does not send browser CORS headers for these signed DRM manifests.
   // Route them through the relay from the first request; native MP4 playback remains direct.
@@ -217,6 +220,11 @@ function Lecture() {
           <div className={text && !src && !embed ? "p-6 text-background" : "aspect-video"}>
             {src ? <video ref={videoRef} controls playsInline poster={imageOf(v)} className="h-full w-full bg-foreground" />
               : embed ? <iframe src={embed} className="h-full w-full" allow="autoplay; fullscreen" allowFullScreen title="Lecture" />
+              : locked ? <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-background">
+                  <Lock className="h-8 w-8" aria-hidden />
+                  <p className="font-semibold">Lecture locked</p>
+                  <p className="max-w-md text-sm text-background/80">{locked}</p>
+                </div>
               : text ? <article className="space-y-3 break-words" dangerouslySetInnerHTML={{ __html: safeText }} />
               : <div className="flex h-full items-center justify-center text-background">Video not available</div>}
           </div>

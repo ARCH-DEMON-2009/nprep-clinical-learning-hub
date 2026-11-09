@@ -26,7 +26,8 @@ export function lectureMedia(value: any) {
   const fields = entries(value);
   const urls = fields.filter(([, url]) => /^https?:\/\//i.test(url));
   const license = urls.find(([key]) => /license_?url|license_?server|widevine/i.test(key))?.[1];
-  const media = urls.filter(([key]) => !/license|notes|pdf|image|thumbnail|poster/i.test(key));
+  // Share links (links.nprep.in) open the app store page, not a video stream.
+  const media = urls.filter(([key, url]) => !/license|notes|pdf|image|thumb|poster|share|avatar|logo/i.test(key) && !/^https:\/\/links\.nprep\.in\//i.test(url));
   const scoreMediaUrl = ([key, url]: [string, string]) => {
     let score = /^(video_?url|stream_?url|playback_?url|manifest_?url)$/i.test(key) ? 30 : 0;
     if (/\.(mpd|m3u8|mp4|webm)(?:[?#]|$)/i.test(url)) score += 20;
@@ -77,6 +78,20 @@ export function lectureMedia(value: any) {
     notes: [...new Set(urls.filter(([key, url]) => /notes|pdf/i.test(key) || /\.pdf(?:[?#]|$)/i.test(url)).map(([, url]) => url))],
     text: fields.find(([key, content]) => /^(text|content|html|lecture_text|text_content|sk_text)$/i.test(key) && !/^https?:\/\//i.test(content))?.[1],
   };
+}
+
+const LOCK_MESSAGES: Record<string, string> = {
+  SUBSCRIPTION_ACCESS_DENIED: "This lecture is part of a paid NPrep plan that your account doesn't have. Free lectures in this course will still play.",
+  COMING_SOON: "This lecture hasn't been released yet.",
+};
+
+/** NPrep withholds the video when a lecture is locked; report why instead of trying to play it. */
+export function lectureLock(value: any): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const reason = typeof value.lock_reason === "string" ? value.lock_reason : undefined;
+  if (value.is_accessible !== false && !reason) return undefined;
+  if (value.is_comming_soon === true || value.is_coming_soon === true) return LOCK_MESSAGES.COMING_SOON;
+  return (reason && LOCK_MESSAGES[reason.toUpperCase()]) ?? "NPrep has locked this lecture for your account.";
 }
 
 export function drmKeySystem(drmType?: string): string {
