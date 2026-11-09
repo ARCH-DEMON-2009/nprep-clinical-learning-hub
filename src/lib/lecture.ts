@@ -73,7 +73,7 @@ export function lectureMedia(value: any) {
     src,
     license: license ?? queryLicense,
     drmType,
-    drmHeaders,
+    drmHeaders: Object.keys(drmHeaders).length ? drmHeaders : undefined,
     notes: [...new Set(urls.filter(([key, url]) => /notes|pdf/i.test(key) || /\.pdf(?:[?#]|$)/i.test(url)).map(([, url]) => url))],
     text: fields.find(([key, content]) => /^(text|content|html|lecture_text|text_content|sk_text)$/i.test(key) && !/^https?:\/\//i.test(content))?.[1],
   };
