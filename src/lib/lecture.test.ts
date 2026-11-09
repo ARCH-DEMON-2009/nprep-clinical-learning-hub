@@ -241,3 +241,30 @@ describe("TPStreams embed", () => {
     expect(lm({ url: "https://x.cloudfront.net/a.mpd" }).embed).toBeUndefined();
   });
 });
+
+import { lectureMedia as lm, registerLicenseRequestFilter as rlf } from "./lecture";
+describe("documented lecture payload", () => {
+  const payload = {
+    manifest_url: "https://stream.nprep.com/dash/l1/manifest.mpd",
+    drm: { type: "widevine", license_url: "https://drm-license.nprep.com/v1/acquire?contentId=l1", headers: { "X-Custom-Drm-Auth": "tok" } },
+    cloud_front_auth: { key_pair_id: "KP", policy: "POL", signature: "SIG" },
+  };
+  it("adds cloud_front_auth as signed params", () => {
+    const url = new URL(lm(payload).src!);
+    expect(url.searchParams.get("Key-Pair-Id")).toBe("KP");
+    expect(url.searchParams.get("Policy")).toBe("POL");
+    expect(url.searchParams.get("Signature")).toBe("SIG");
+  });
+  it("reads nested drm type and headers", () => {
+    const m = lm(payload);
+    expect(m.drmType).toBe("widevine");
+    expect(m.drmHeaders).toEqual({ "X-Custom-Drm-Auth": "tok" });
+  });
+  it("sends DRM auth header on license requests", () => {
+    let f: any;
+    rlf({ registerRequestFilter: (x) => { f = x; } }, 2, null, { "X-Custom-Drm-Auth": "tok" });
+    const req = { headers: {}, uris: ["https://drm-license.nprep.com/x"] };
+    f(2, req);
+    expect(req.headers).toEqual({ "X-Custom-Drm-Auth": "tok", "Content-Type": "application/octet-stream" });
+  });
+});

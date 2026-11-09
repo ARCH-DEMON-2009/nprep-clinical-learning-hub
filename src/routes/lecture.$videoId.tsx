@@ -49,7 +49,7 @@ function Lecture() {
   const { videoId } = Route.useParams();
   const q = useQuery({ queryKey: ["video", videoId], queryFn: () => api(`/video?videoId=${videoId}`) });
   const v = lectureData(q.data);
-  const { embed: tpEmbed, src: mediaSrc, license, drmType, notes, text } = lectureMedia(v);
+  const { embed: tpEmbed, src: mediaSrc, license, drmType, drmHeaders, notes, text } = lectureMedia(v);
   const embed = tpEmbed ?? (mediaSrc && /youtube\.com|youtu\.be|vimeo\.com/i.test(mediaSrc) ? mediaSrc : undefined);
   // CloudFront does not send browser CORS headers for these signed DRM manifests.
   // Route them through the relay from the first request; native MP4 playback remains direct.
@@ -126,7 +126,7 @@ function Lecture() {
         if (cancelled) return;
         const engine = shakaPlayer.getNetworkingEngine();
         const licenseType = shaka.net.NetworkingEngine.RequestType.LICENSE;
-        registerLicenseRequestFilter(engine, licenseType, token);
+        registerLicenseRequestFilter(engine, licenseType, token, drmHeaders);
         if (!viaProxy && mediaSrc) engine?.registerRequestFilter((type: number, request: { uris: string[] }) => {
           if (type !== licenseType) request.uris = request.uris.map((uri) => signedMediaRequestUrl(uri, mediaSrc));
         });
