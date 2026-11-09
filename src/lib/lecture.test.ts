@@ -1,4 +1,4 @@
-import { lectureMedia as lm, registerLicenseRequestFilter as rlf } from "./lecture";
+import { lectureMedia as lmx, registerLicenseRequestFilter as rlf } from "./lecture";
 import { describe, expect, it } from "vitest";
 import { drmKeySystem, ensureDrmLicenseContentType, registerLicenseRequestFilter, lectureData, lectureMedia, lectureMediaDiagnostics, playbackMessage, playbackFallbackMode, signedMediaRequestUrl } from "./lecture";
 import { cloudFrontCookieHeader, cloudFrontCredentialSummary, decodeMediaTarget, embeddedMediaRedirect, encodeMediaTarget, ensureMediaPostContentType, isAllowedMediaHost, isNprepLinkResolverUrl, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, mediaProxyUrl, normalizeCloudFrontSignedUrl, nprepSiteOrigin, rewriteMediaManifest } from "./media-proxy";
@@ -250,13 +250,13 @@ describe("documented lecture payload", () => {
     cloud_front_auth: { key_pair_id: "KP", policy: "POL", signature: "SIG" },
   };
   it("adds cloud_front_auth as signed params", () => {
-    const url = new URL(lm(payload).src!);
+    const url = new URL(lmx(payload).src!);
     expect(url.searchParams.get("Key-Pair-Id")).toBe("KP");
     expect(url.searchParams.get("Policy")).toBe("POL");
     expect(url.searchParams.get("Signature")).toBe("SIG");
   });
   it("reads nested drm type and headers", () => {
-    const m = lm(payload);
+    const m = lmx(payload);
     expect(m.drmType).toBe("widevine");
     expect(m.drmHeaders).toEqual({ "X-Custom-Drm-Auth": "tok" });
   });
