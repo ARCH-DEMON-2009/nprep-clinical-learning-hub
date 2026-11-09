@@ -268,3 +268,19 @@ describe("documented lecture payload", () => {
     expect(req.headers).toEqual({ "X-Custom-Drm-Auth": "tok", "Content-Type": "application/octet-stream" });
   });
 });
+
+describe("locked lectures", () => {
+  const locked = {
+    id: "Rlnx1TNI-fnchgUuIJAIR", is_accessible: false, lock_reason: "SUBSCRIPTION_ACCESS_DENIED",
+    share_link: "https://links.nprep.in/xPrcKAH4b4b",
+  };
+  it("reports a subscription lock", async () => {
+    const { lectureLock } = await import("./lecture");
+    expect(lectureLock(locked)).toMatch(/paid NPrep plan/);
+    expect(lectureLock({ is_accessible: true })).toBeUndefined();
+  });
+  it("never uses the share link as the video source", async () => {
+    const { lectureMedia } = await import("./lecture");
+    expect(lectureMedia(locked).src).toBeUndefined();
+  });
+});

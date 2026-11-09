@@ -145,7 +145,7 @@ function Sections({ courseId, course }: { courseId: string; course?: any }) {
                   {videos.map((v, j) => {
                     const id = idOf(v);
                     const free = v?.is_free;
-                    const locked = !free && (v?.is_locked ?? v?.locked);
+                    const locked = !free && (v?.is_locked ?? v?.locked ?? (v?.is_accessible === false || Boolean(v?.lock_reason)));
                     const dur = fmt(v?.time ?? v?.duration);
                     const watched = fmt(v?.watch_time);
                     const completed = isDone(v);
