@@ -90,7 +90,7 @@ export function lectureLock(value: any): string | undefined {
   if (!value || typeof value !== "object") return undefined;
   const reason = typeof value.lock_reason === "string" ? value.lock_reason : undefined;
   if (value.is_accessible !== false && !reason) return undefined;
-  if (value.is_comming_soon === true || value.is_coming_soon === true) return LOCK_MESSAGES.COMING_SOON;
+  if (value.is_comming_soon === true || value.is_coming_soon === true) return LOCK_MESSAGES["COMING_SOON"];
   return (reason && LOCK_MESSAGES[reason.toUpperCase()]) ?? "NPrep has locked this lecture for your account.";
 }
 
