@@ -1,4 +1,5 @@
 # NPrep playback and question taking
+- [x] Show locked lectures (NPrep lock_reason / is_accessible=false) as locked instead of trying the share link as video; 128 tests pass.
 - [x] Add a compact, privacy-safe API connection panel distinguishing upstream, site-handler, Cloudflare, network and access errors; 45 targeted tests pass and controlled desktop/mobile error-source and recovery flows verified without OTP calls.
 - [x] Add browser and upstream retries for 521/502/503/504, preserve complete retried POST payloads, add retry controls, and remove the required Mumbai deployment region (118 tests pass; simulated failure → Retry recovery verified; live service/DRM and deployment remain unverified).
 - [x] Handle temporary 521/502/504 failures with one 500ms retry, remove development API fallback, enforce Android headers, and verify playback retry/credential safety (106 tests pass; sample playback retry verified; live DRM still requires an NPrep session).
