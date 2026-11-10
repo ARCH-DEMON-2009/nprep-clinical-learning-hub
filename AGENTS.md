@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 - All NPrep backend calls go through the `/api/nprep/*` pass-through route (src/routes/api/nprep.$.ts) via `api()` in src/lib/api.ts — avoids browser CORS; backend must not be modified.
 - Select v3 API origins through the pure `nprepApiOrigin` helper; static tests avoid sending or verifying OTPs.
-- Every server request to api.nprep.in goes through `applyNprepClientHeaders` (NPrep app User-Agent + semver x-app-version); the API returns 403 before routing/auth to browser agents. CDN requests keep the browser agent.
+- Every server request to api.nprep.in goes through `applyNprepClientHeaders` (Dart app User-Agent, since NPrep/ agents now get 403 + semver x-app-version); the API returns 403 before routing/auth to browser agents. CDN requests keep the browser agent.
 - Response shapes from api.nprep.in are undocumented, so pages read them defensively with the helpers in src/lib/api.ts (findKey/findArrays/titleOf/imageOf).
 - Lecture streams use dynamically imported Shaka with DRM configured before loading, while native files use the video element; this keeps browser playback code out of SSR.
 - Shaka LICENSE requests force a single binary Content-Type header before loading; media and manifest request headers remain unchanged to preserve CDN behavior.
