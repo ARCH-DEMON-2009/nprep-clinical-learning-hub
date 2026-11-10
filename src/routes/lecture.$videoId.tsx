@@ -203,7 +203,7 @@ function Lecture() {
             {src ? <video ref={videoRef} controls playsInline poster={imageOf(v)} className="h-full w-full bg-foreground" />
               : embed ? <iframe src={embed} className="h-full w-full" allow="autoplay; fullscreen" allowFullScreen title="Lecture" />
               : text ? <article className="space-y-3 break-words" dangerouslySetInnerHTML={{ __html: safeText }} />
-              : <div className="flex h-full items-center justify-center text-background">Video not available</div>}
+              : <div className="flex h-full items-center justify-center p-6 text-center text-background">NPrep did not send a video link for this lecture. It may be locked for your plan, or your sign-in expired — sign out, sign in again, and reopen it.</div>}
           </div>
           {src && (
             <div className="flex flex-wrap items-center gap-2 border-t border-background/20 p-3">

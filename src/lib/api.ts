@@ -25,7 +25,7 @@ export class ApiError extends Error {
 }
 
 export const isExpiredSessionResponse = (status: number, token: string | null) =>
-  !!token && (status === 401 || status === 403);
+  !!token && status === 401;
 
 export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
