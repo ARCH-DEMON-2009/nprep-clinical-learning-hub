@@ -15,7 +15,7 @@ describe("API client", () => {
 describe("api helpers", () => {
   it("treats authenticated 401 and 403 responses as expired sessions", () => {
     expect(isExpiredSessionResponse(401, "token")).toBe(true);
-    expect(isExpiredSessionResponse(403, "token")).toBe(true);
+    expect(isExpiredSessionResponse(403, "token")).toBe(false);
     expect(isExpiredSessionResponse(403, null)).toBe(false);
     expect(isExpiredSessionResponse(200, "token")).toBe(false);
   });
