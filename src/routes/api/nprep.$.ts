@@ -26,12 +26,22 @@ async function forward({ request, params }: { request: Request; params: { _splat
   const signedCookies = new Map<string, string>();
   let res: Response | undefined;
   for (let redirects = 0; redirects <= 5; redirects += 1) {
-    res = await fetch(target, {
-      method,
-      headers,
-      ...(body === undefined ? {} : { body }),
-      redirect: "manual",
-    });
+    try {
+      res = await fetch(target, {
+        method,
+        headers,
+        ...(body === undefined ? {} : { body }),
+        redirect: "manual",
+        signal: AbortSignal.timeout(20000),
+      });
+    } catch {
+      // Connection refused / timeout on the primary host: retry once on NPrep's alternate host.
+      if (target.hostname === "api.nprep.in") {
+        target.hostname = "dev-api.nprep.in";
+        continue;
+      }
+      return Response.json({ message: "NPrep server could not be reached. Please try again shortly." }, { status: 502 });
+    }
     for (const cookie of localMediaCookies(res.headers, new URL(request.url).protocol === "https:")) {
       const pair = cookie.split(";", 1)[0] ?? "";
       const separator = pair.indexOf("=");

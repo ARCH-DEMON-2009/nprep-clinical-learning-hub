@@ -140,6 +140,8 @@ export function nprepApiOrigin(request: Request, path: string): string {
 
 /** Version of the uploaded NPrep Android app (versionName in its manifest). */
 export const NPREP_APP_VERSION = "5.4.2";
+/** api.nprep.in now 403s `NPrep/` agents but accepts the Flutter app's Dart agent. */
+export const NPREP_USER_AGENT = "Dart/3.5 (dart:io)";
 
 /**
  * NPrep's API answers 403 before routing/auth unless the caller identifies as the
@@ -147,7 +149,7 @@ export const NPREP_APP_VERSION = "5.4.2";
  * Browser, curl and okhttp agents are refused. Sign-in is still enforced (401).
  */
 export function applyNprepClientHeaders(headers: Headers): Headers {
-  headers.set("user-agent", `NPrep/${NPREP_APP_VERSION}`);
+  headers.set("user-agent", NPREP_USER_AGENT);
   headers.set("x-app-version", NPREP_APP_VERSION);
   return headers;
 }
