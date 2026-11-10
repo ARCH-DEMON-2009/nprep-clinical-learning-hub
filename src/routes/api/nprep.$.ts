@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { applyNprepClientHeaders, isAllowedMediaHost, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload, nprepApiOrigin } from "@/lib/media-proxy";
+import { applyNprepClientHeaders, isAllowedMediaHost, isNprepSiteHost, localMediaCookies, localMediaCookiesFromPayload } from "@/lib/media-proxy";
 
 // Transparent pass-through to the NPrep backend so the browser avoids CORS.
 // It holds no secrets: the caller's own bearer token is forwarded unchanged.
@@ -7,31 +7,36 @@ async function forward({ request, params }: { request: Request; params: { _splat
   const url = new URL(request.url);
   let target = new URL(`https://api.nprep.in/${params._splat ?? ""}${url.search}`);
   const headers = new Headers();
-  const siteOrigin = nprepApiOrigin(request, params._splat ?? "");
-  headers.set("origin", siteOrigin);
-  headers.set("referer", `${siteOrigin}/`);
   const auth = request.headers.get("authorization");
   if (auth) headers.set("authorization", auth);
   const ct = request.headers.get("content-type");
   if (ct) headers.set("content-type", ct);
+  // NPrep's API now 403s browser-like requests (origin/sec-fetch headers, browser agents); mimic the app.
   // NPrep's API refuses browser user agents with 403; identify as the NPrep app.
   applyNprepClientHeaders(headers);
   headers.set("accept-language", request.headers.get("accept-language") || "en-IN,en;q=0.9");
-  headers.set("sec-fetch-site", "cross-site");
-  headers.set("sec-fetch-mode", "cors");
-  headers.set("sec-fetch-dest", "empty");
   headers.set("accept", "application/json, text/plain, */*");
   let method = request.method;
   let body: BodyInit | undefined = ["GET", "HEAD"].includes(method) ? undefined : await request.text();
   const signedCookies = new Map<string, string>();
   let res: Response | undefined;
   for (let redirects = 0; redirects <= 5; redirects += 1) {
-    res = await fetch(target, {
-      method,
-      headers,
-      ...(body === undefined ? {} : { body }),
-      redirect: "manual",
-    });
+    try {
+      res = await fetch(target, {
+        method,
+        headers,
+        ...(body === undefined ? {} : { body }),
+        redirect: "manual",
+        signal: AbortSignal.timeout(20000),
+      });
+    } catch {
+      // Connection refused / timeout on the primary host: retry once on NPrep's alternate host.
+      if (target.hostname === "api.nprep.in") {
+        target.hostname = "dev-api.nprep.in";
+        continue;
+      }
+      return Response.json({ message: "NPrep server could not be reached. Please try again shortly." }, { status: 502 });
+    }
     for (const cookie of localMediaCookies(res.headers, new URL(request.url).protocol === "https:")) {
       const pair = cookie.split(";", 1)[0] ?? "";
       const separator = pair.indexOf("=");

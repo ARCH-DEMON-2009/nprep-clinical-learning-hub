@@ -41,14 +41,14 @@ describe("NPrep pass-through uses the accepted origin", () => {
     expect(response.status).toBe(200);
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url).toBe("https://api.nprep.in/v3/auth/login");
-    expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
-    expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
+    expect(calls[0]?.headers.get("origin")).toBeNull();
+    expect(calls[0]?.headers.get("referer")).toBeNull();
     // NPrep returns 403 to browser agents; it needs the app's agent and a semver x-app-version.
-    expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
+    expect(calls[0]?.headers.get("user-agent")).toBe("Dart/3.5 (dart:io)");
     expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
-    expect(calls[0]?.headers.get("sec-fetch-site")).toBe("cross-site");
-    expect(calls[0]?.headers.get("sec-fetch-mode")).toBe("cors");
-    expect(calls[0]?.headers.get("sec-fetch-dest")).toBe("empty");
+    expect(calls[0]?.headers.get("sec-fetch-site")).toBeNull();
+    expect(calls[0]?.headers.get("sec-fetch-mode")).toBeNull();
+    expect(calls[0]?.headers.get("sec-fetch-dest")).toBeNull();
     expect(calls[0]?.headers.get("x-requested-with")).toBeNull();
     expect(calls[0]?.body).toBe(body);
   });
@@ -94,10 +94,10 @@ describe("NPrep pass-through uses the accepted origin", () => {
       params: { _splat: path },
     });
     expect(calls[0]?.url).toBe(`https://api.nprep.in/${path}${query}`);
-    expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
-    expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
+    expect(calls[0]?.headers.get("origin")).toBeNull();
+    expect(calls[0]?.headers.get("referer")).toBeNull();
     expect(calls[0]?.headers.get("authorization")).toBe("Bearer user-token");
-    expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
+    expect(calls[0]?.headers.get("user-agent")).toBe("Dart/3.5 (dart:io)");
     expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
   });
 
@@ -126,10 +126,10 @@ describe("lecture relay uses the accepted origin for NPrep API links", () => {
       }),
       params: { _splat: `relay/${encodeMediaTarget("https://api.nprep.in/v3/video/stream?videoId=31")}` },
     });
-    expect(calls[0]?.headers.get("origin")).toBe("https://nprep.in");
-    expect(calls[0]?.headers.get("referer")).toBe("https://nprep.in/");
+    expect(calls[0]?.headers.get("origin")).toBeNull();
+    expect(calls[0]?.headers.get("referer")).toBeNull();
     expect(calls[0]?.headers.get("authorization")).toBe("Bearer user-token");
-    expect(calls[0]?.headers.get("user-agent")).toBe("NPrep/5.4.2");
+    expect(calls[0]?.headers.get("user-agent")).toBe("Dart/3.5 (dart:io)");
     expect(calls[0]?.headers.get("x-app-version")).toBe("5.4.2");
   });
 
@@ -141,5 +141,21 @@ describe("lecture relay uses the accepted origin for NPrep API links", () => {
     });
     expect(calls[0]?.headers.get("user-agent")).toBe("Mozilla/5.0 Test");
     expect(calls[0]?.headers.get("x-app-version")).toBeNull();
+  });
+});
+
+describe("NPrep pass-through host failover", () => {
+  it("retries on dev-api.nprep.in when api.nprep.in refuses the connection", async () => {
+    const hosts: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      hosts.push(url.hostname);
+      if (url.hostname === "api.nprep.in") throw new TypeError("ECONNREFUSED");
+      return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
+    }));
+    const res = await nprep.GET({ request: new Request("https://site.test/api/nprep/v3/test"), params: { _splat: "v3/test" } });
+    expect(res.status).toBe(200);
+    expect(hosts).toEqual(["api.nprep.in", "dev-api.nprep.in"]);
+    vi.unstubAllGlobals();
   });
 });
