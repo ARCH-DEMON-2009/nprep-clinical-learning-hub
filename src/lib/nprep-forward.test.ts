@@ -153,9 +153,7 @@ describe("NPrep pass-through host failover", () => {
       if (url.hostname === "api.nprep.in") throw new TypeError("ECONNREFUSED");
       return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
     }));
-    const { Route } = await import("@/routes/api/nprep.$");
-    const handlers = (Route.options as any).server.handlers;
-    const res = await handlers.GET({ request: new Request("https://site.test/api/nprep/v3/test"), params: { _splat: "v3/test" } });
+    const res = await nprep.GET({ request: new Request("https://site.test/api/nprep/v3/test"), params: { _splat: "v3/test" } });
     expect(res.status).toBe(200);
     expect(hosts).toEqual(["api.nprep.in", "dev-api.nprep.in"]);
     vi.unstubAllGlobals();
